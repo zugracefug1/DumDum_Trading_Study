@@ -1,0 +1,2734 @@
+<!--
+================================================================================
+  트레이딩 훈련 노트 (Trading Training Note) — 옛 이름: 차트 예측 검증 노트
+  버전: v1.2.0
+  수정일: 2026-11-03
+--------------------------------------------------------------------------------
+  [개요]
+  매일 할 일(필수 차트 분석·백테스트·영상 공부·운동)을 점수로 관리하는 트레이딩 훈련
+  단일 HTML 웹앱. 중심 기능은 차트에 예상 경로를 그린 사진을 남기고, 예정 시간에
+  지금 차트 사진과 비교해 1~5점으로 채점하고 이유를 적는 것.
+  서버 없이 브라우저 내부(IndexedDB)에만 저장한다.
+
+  [사용 흐름]
+  하루: 오늘 화면 → 필수 4종목 분석 → 확인 필요 예측 검증 → 백테스트 20개 → 영상 1개 → 운동
+  예측 등록: 종목 → 시간대 → 사진 → 분석 글(선택) → 예정 시간 → 저장 → (휴대폰 알람 안내 / 캘린더)
+  검증: 알람 → 지금 차트 사진 → 예전 사진과 비교(자동 맞춤) → 1~5점 → 이유 분석 → 끝
+  백테스트: 기법 → 성공/실패 → 종목 → 시간대 → 기본 차트 → 이유 → (설명 차트) → 저장하고 다음
+
+  [현재 기능 - v1.2.0 / 1~8단계 + 분석 글]
+  0. 오늘 (하단 '오늘' 탭, 앱을 열면 처음 보이는 화면)
+     - 점수판: 오늘 점수 / 하루 목표(기본 60점), 달성률 막대, 연속 달성일, 미션별 점수 내역
+     - 필수 차트 분석: 필수 종목(기본 골드·나스닥·비트코인·코스피) 체크 카드,
+       오늘 예측을 등록한 종목은 ✓와 시간대, 누르면 그 종목이 고른 상태로 새 예측 화면
+     - 확인 필요 예측 목록 (누르면 바로 검증)
+     - 백테스트 n / 20 막대, 추가·기법별 보기 버튼
+     - 영상 공부: 오늘 기록한 영상(점수 인정 여부), 추가·목록 버튼
+     - 운동: 항목 버튼을 누르면 완료(다시 누르면 취소), 메모, ▶ 따라 할 영상 열기
+     - 저장 공간·백업 안내 배너
+     - 오후 9시 이후 필수 분석이 남았으면, 앱이 열려 있을 때 알림 창 (하루 한 번)
+     - + 버튼: 예측 / 백테스트 / 영상 공부 중 고르기
+  1. 점수 (기록에서 계산, 따로 저장하지 않음. 기준을 바꾸면 지난 날도 다시 계산)
+     - 필수 종목 예측 등록: 종목당 5점 (여러 시간대여도 종목당 한 번, 취소한 예측 제외)
+     - 예측 검증: 1건당 2점 (검증한 날 기준, 맞춘 정도와 상관없음)
+     - 백테스트: 1개당 1점, 하루 20개 달성 보너스 5점 (21개부터도 1점씩)
+     - 영상 공부: 배운 점 30자 이상인 영상만, 첫 영상 5점·두 번째부터 2점
+     - 운동: 항목마다 정한 점수, 같은 항목은 하루 한 번
+     - 연속 달성일: 필수 종목을 모두 분석한 날이 이어진 수 (오늘 아직이면 어제까지)
+       빠뜨린 날은 감점 없이 통계에서 빨간 날로 표시
+     - 하루 기준: 한국 시간 0시~24시
+  2. 예측 등록 (+ 버튼, 한 화면)
+     - 종목 버튼 선택 (마지막에 쓴 종목 미리 선택), 버튼 옆 입력칸으로 새 종목 추가
+     - 시간대: 5분·10분·15분·30분·1시간·2시간·4시간·6시간·8시간·일·주 (1분 제외,
+       예전 1분 기록은 그대로 보이고 기록·통계에도 나옴)
+     - 사진 1장 이상 (필수). 자동 압축(긴 변 1280px JPEG), 실패 시 원본 저장
+     - 분석 글 (선택): 왜 이렇게 예상했는지. 글자 수 표시. 예측 목록에 첫 줄, 상세·검증 화면에
+       전체가 보이고 내보내기 표에도 들어감 (예전 v0.1.0 기록의 근거 메모도 여기에 보임)
+     - 예정 시간: 15분 후·30분 후·1시간 후·4시간 후·내일 버튼 또는 직접 지정
+     - 연속 등록: '저장하고 다른 시간대' → 같은 종목·사진·분석 글로 새 등록 화면
+  3. 알람
+     - 12시간 이내 예측: 저장 후 '휴대폰 알람 맞추기' 창에 맞출 시각을 크게 표시
+       (갤럭시는 웹 페이지가 시계 앱에 알람을 넣을 수 없어 직접 맞추도록 안내)
+     - 12시간보다 먼 예측: 캘린더 추가 창
+          · 파일 버전: '휴대폰 캘린더(.ics)' 한 번에 추가 + 예측별 '구글 캘린더' 링크
+          · 링크 버전: 예측별 '구글 캘린더' 링크 (링크 페이지는 .ics 저장 불가)
+          (설정: 매번 묻기 / 항상 추가 / 추가 안 함)
+     - 앱 내부 알람: 앱이 열려 있으면 15초마다 확인 → 소리·진동·알림 창
+     - 앱을 열거나 다시 보면 시간이 지난 예측을 '확인 필요'로 표시
+  4. 검증 (정답 확인)
+     - 예측 사진·지금 차트 사진 위아래 비교, 1~5점, 이유 분석, 나중에 수정 가능
+     - 겹쳐서 비교: 밀어 보기·겹쳐 보기, 자동 맞춤(캔들 오르내림 모양으로 위치·배율),
+       확신도 표시, 직접 맞추기(이동·가로/세로 크기)
+  5. 예측 탭: '진행 중'(확인 필요·대기중·최근 검증 완료·취소) / '검증 완료'(기간·종목·
+     시간대·점수 필터, 건수·평균 점수), 예측 상세(사진·검증 결과·수정·취소·삭제)
+  6. 백테스트 탭
+     - 오늘 n / 20 막대, 전체 개수, 추가 버튼
+     - 기법별: 개수·성공률 막대 → 기법 화면(전체·성공·실패 수, 성공률, 성공만/실패만,
+       사례 목록, 이 기법으로 추가, 기법 이름 수정·삭제)
+     - 최근 기록 15개
+     - 등록: 기법(버튼 + 옆 입력칸으로 추가), 결과(성공/실패), 종목(버튼 + 입력칸),
+       시간대(1분·3분 포함 13종), 기본 차트(필수), 이유(10자 이상), 설명 차트(선택)
+       · 사진은 긴 변 1080px로 압축
+       · '저장하고 다음': 기법·종목·시간대는 남기고 결과·사진·이유만 비움, 오늘 개수 표시
+       · 마지막에 쓴 기법·종목·시간대를 다음 등록에 미리 선택
+     - 상세: 기본 차트·이유·설명 차트를 크게, 수정·삭제
+  7. 영상 공부
+     - 링크(필수, https://), 제목(선택), 느끼고 배운 점(글자 수 표시, 30자 이상이면 점수)
+     - 영상 목록(설정·오늘 화면에서): 영상 열기 링크, 배운 점, 수정·삭제
+  8. 운동
+     - 운동 항목(이름·점수·따라 할 영상 링크) 설정에서 추가·수정·삭제
+       (기록이 있는 항목은 삭제 대신 목록에서만 빼서 지난 점수 유지)
+     - 기본 항목 (즐겁고 쉬운 10분 유튜브 영상 3개): 집에서 신나게 걷기 10분(5점),
+       서서 하는 유산소 10분(5점), 자기 전 누워서 스트레칭 10분(3점)
+       · v1.0.0의 예전 기본 항목 5개는 v1.1.0을 처음 열 때 정리 (기록 있으면 목록에서만 빼서
+         지난 점수 유지, 없으면 삭제). 직접 만든 항목은 그대로 둠 (설정 exVersion)
+  9. 통계 탭
+     - '훈련': 최근 7일·30일 날짜별 점수 쌓은 막대(미션별 색), 목표 선, 필수 분석 완료/빠진 날
+       점, 평균 하루 점수, 목표 달성일, 연속 달성일(지금·최장), 미션별 달성률,
+       백테스트 기법별 성공률(누르면 기법 화면), 실패가 가장 많은 기법, 영상 수, 운동 항목별 횟수
+     - '예측 점수': 기간별 검증 건수·평균 점수·4점 이상 비율, 점수 분포, 종목별·시간대별
+  10. 설정
+     - 종목 관리, 필수 분석 종목, 점수 기준·하루 목표(−/+), 운동 항목, 영상 공부 목록
+     - 알람(캘린더 방식·소리·진동·시스템 알림·테스트), 기본 시간대
+     - 저장 공간: 사용량, 예측·결과·백테스트 사진 장수와 용량
+     - 오래된 사진 정리: 3개월·6개월·1년 지난 검증 완료 예측과 백테스트의 사진만 삭제
+       (점수·이유·종목·시간대·결과는 남아 통계에 그대로 반영), 취소된 예측 모두 삭제
+     - 내보내기·가져오기 (아래 [백업 파일])
+  11. 기타
+     - 확인·안내 창은 모두 화면 안 창 (링크 페이지에서 alert·confirm이 막혀 있어서)
+     - 저장 공간 80% 이상이면 오늘 화면 위에 정리 안내
+     - 브라우저에 영구 저장 요청, 휴대폰 뒤로가기로 이전 화면, 작성 중 이탈 시 확인
+
+  [백업 파일 - HTML]
+  - 내보내기 종류: 전체 백업(모든 기록 + 사진) / 분석용(사진 제외) / 최근 30일(기록 + 사진)
+  - 파일 하나(.html): 휴대폰 브라우저로 열면 표로 정리된 보고서
+      요약, 날짜별 점수, 예측·검증(분석 글 포함), 백테스트 기법별 요약, 백테스트, 영상 공부, 운동 기록
+    (사진은 눌러서 크게), 날짜는 'YYYY-MM-DD HH:MM'
+  - 복원용 데이터는 같은 파일의 <script type="application/json" id="tn-backup">에 들어 있음
+    { app, version, exportedAt, kind: full|nophoto|recent, from, data: { 저장소별 배열, photos[dataUrl] } }
+  - 가져오기: .html(위 데이터) 또는 예전 .json 백업. 전체 백업만 '덮어쓰기' 가능,
+    분석용·최근 30일은 '합치기'만 가능. 전체 백업을 내보낼 때만 '마지막 백업 시각'을 갱신
+
+  [집계 기준]
+  - 예측 점수 통계·기록 기간은 검증한 시각 기준. '이번 주'는 월요일 0시부터.
+  - 점수가 있는 검증 완료 예측만 예측 점수 통계에 집계 (취소·대기 예측은 제외).
+
+  [알람 한계]
+  서버 없는 웹앱은 브라우저가 닫혀 있으면 알람을 울릴 수 없다.
+  앱 밖 알람은 휴대폰 캘린더(.ics)·구글 캘린더 일정, 12시간 이내는 시계 앱 직접 설정 안내로 대신.
+
+  [두 가지 실행 방식]
+  - 파일 버전: 이 index.html을 휴대폰 브라우저로 열기
+  - 링크 버전: 이 파일에서 html/head/body 껍데기를 벗겨 claude.ai 링크 페이지로 게시
+    (window.claude.use 가 있으면 링크 버전으로 판단). 두 버전의 기록은 따로 저장되며
+    백업 파일로 옮긴다. 링크 버전의 파일 저장은 downloads 기능(저장 확인 창)을 쓴다.
+
+  [데이터 구조 - IndexedDB 'chartPredictionJournal' v2]
+  symbols(id) / predictions(id) / reviews(predictionId) / photos(id, Blob) / settings(key='main')
+  techniques(id, name, order) / backtests(id, techniqueId, result: win|loss, symbolId, timeframe,
+    photoIds, explainPhotoIds, reason, createdAt, updatedAt)
+  videos(id, url, title, note, createdAt, updatedAt)
+  exercises(id, name, points, link, order, active) / exerciseLogs(id, exerciseId, day, memo, createdAt)
+  groups 저장소는 v0.1.0에서 만든 것으로, 지우지 않고 사용하지 않는다.
+  예측: id, symbolId, timeframe, photoIds, memo(분석 글), createdAt, expectedAt, calendarAdded, status
+  검증: predictionId, score(1~5), resultPhotoIds, reason, reviewedAt, updatedAt
+  사진 구분(kind): analysis(예측) / result(지금 차트) / backtest(기본 차트) / btexplain(설명 차트)
+  예측 상태: waiting(대기중) → due(확인 필요) → done(검증 완료) / canceled(취소)
+  설정: mandatorySymbolIds, scores, dailyGoal, lastNightRemind, lastBt(마지막 백테스트 선택),
+    exSeeded·exVersion(기본 운동 항목을 넣었는지·몇 번째 기본 목록인지) 등. 새로 생긴 값은 시작할 때 기본값으로 채운다.
+
+  [변경 이력]
+  v1.2.0 (2026-11-03)
+    - 추가: 백테스트 시간대에 3분 (1분·3분·5분·…·주 13종). 예측 등록 시간대는 그대로
+  v1.1.0 (2026-11-01)
+    - 추가: 예측 등록에 '분석 글'(선택) 칸, 목록·상세·검증 화면·내보내기 표에 표시
+    - 변경: 기본 운동을 즐겁고 쉬운 10분 영상 3개로 교체 (예전 기본 항목 자동 정리)
+  v1.0.0 (2026-11-01) 6~8단계 - 트레이딩 훈련 노트 완성
+    - 추가: 백테스트 탭·등록(저장하고 다음)·기법 화면·상세·수정·삭제 (6단계)
+    - 추가: 영상 공부 기록·목록, 운동 항목·완료·메모·추천 영상, 오늘 화면 카드 (7단계)
+    - 추가: 통계 '훈련'(날짜별 점수·연속 달성·미션 달성률·기법별 성공률·운동 횟수) (8단계)
+    - 변경: 내보내기·가져오기를 HTML 파일로 (표로 보는 보고서 + 복원 데이터), 내보내기 종류 3가지
+    - 변경: 사진 정리에 백테스트 사진 포함, 저장 공간에 백테스트 사진 표시
+    - 변경: + 버튼이 화면에 따라 예측·백테스트·영상 선택, 종목 삭제 시 백테스트 기록도 확인
+  v0.7.0 (2026-11-01) 5단계 - 트레이딩 훈련 노트로 확장 시작
+    - 변경: 앱 이름 '트레이딩 훈련 노트'
+    - 변경: 하단 탭 오늘·예측·백테스트·통계·설정 (홈+기록 → 예측 탭의 진행 중/검증 완료)
+    - 추가: 오늘 화면 (점수판, 필수 종목 체크, 확인 필요, 오후 9시 알림)
+    - 추가: 점수 계산·연속 달성일, 설정의 필수 종목·점수 기준·하루 목표
+    - 추가: 12시간 이내 예측 '휴대폰 알람' 안내 (갤럭시)
+    - 변경: IndexedDB v2 (새 저장소 5개), 백업에 새 저장소 포함
+  v0.6.0 (2026-10-28)
+    - 변경: 등록 시간대에서 1분 제외 (예전 1분 기록은 유지, 기본 시간대가 1분이면 5분으로)
+    - 추가: 겹쳐서 비교 자동 맞춤 (같은 캔들 위치끼리), 직접 맞추기(이동·가로/세로 크기)
+  v0.5.0 (2026-10-28) 4단계
+    - 추가: 링크 버전 지원 (화면 안 확인창, downloads 기능으로 백업 저장, 구글 캘린더 링크)
+    - 추가: 연속 등록 ('저장하고 다른 시간대 추가')
+    - 추가: 겹쳐서 비교 화면 (밀어 보기·겹쳐 보기)
+    - 추가: 저장 공간 표시, 오래된 사진 정리, 취소된 예측 모두 삭제, 저장 공간 경고
+    - 변경: alert·confirm을 모두 화면 안 창으로 교체
+  v0.4.0 (2026-10-28) 3단계
+    - 추가: 기록 화면 (검증 완료 목록, 기간·종목·시간대·점수 필터, 건수·평균 점수)
+    - 추가: 통계 화면 (요약, 점수 분포, 종목별·시간대별 평균 점수, 기록 화면 연결)
+  v0.3.0 (2026-10-28) 2단계
+    - 추가: 등록 화면 종목 버튼 옆 입력칸으로 새 종목 추가 (계속 남음)
+    - 추가: 캘린더(.ics) 알람, 앱 내부 알람(소리·진동·알림 창·시스템 알림), 알람 설정
+    - 추가: 검증 화면 (예측 사진·지금 사진 위아래 비교, 1~5점, 이유 분석), 검증 수정
+  v0.2.0 (2026-10-28) 입력 간소화 재작성 (1단계)
+    - 삭제: 가격, 목표가(범위), 무효화 가격, 현재 국면, 전망, 근거 메모·태그,
+            시간대 여러 개 묶음 등록
+    - 변경: 등록을 종목·시간대·사진·예정 시간 4가지로 줄임, 사진 필수
+    - 수정: 사진 첨부가 안 되던 문제 → 투명 입력을 덮는 방식, 압축 실패 시 원본 저장
+  v0.1.0 (2026-10-28) 최초 작성 - 1단계 기능 구현
+================================================================================
+-->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>트레이딩 훈련 노트</title>
+<style>
+:root{
+  --bg:#0f1115;--card:#181b22;--card2:#1f232c;--line:#2a2f3a;--text:#e8eaed;--muted:#9aa0aa;
+  --accent:#f5b301;--danger:#ef4444;
+  --s5:#16a34a;--s4:#65a30d;--s3:#d97706;--s2:#ea580c;--s1:#6b7280;
+  --c-review:#60a5fa;--c-video:#a78bfa;--c-ex:#f472b6;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:15px;overflow-x:hidden}
+button{font:inherit;color:inherit}
+input,select,textarea{font:inherit;color:var(--text);background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%;min-height:44px}
+textarea{min-height:110px;resize:vertical;line-height:1.5}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+.topbar{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;min-height:52px}
+.topbar h1{font-size:17px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar .ver{font-size:11px;color:var(--muted)}
+.backbtn{background:none;border:none;font-size:22px;padding:0 8px 0 0;min-width:36px;min-height:36px;display:none}
+main{padding:12px 16px calc(96px + env(safe-area-inset-bottom));max-width:560px;margin:0 auto}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;background:#12151b;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tabbar button{flex:1;background:none;border:none;padding:10px 0 8px;min-height:56px;color:var(--muted);font-size:12px;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabbar button .ic{font-size:19px;line-height:1}
+.tabbar button.on{color:var(--accent)}
+.fab{position:fixed;right:18px;bottom:calc(72px + env(safe-area-inset-bottom));z-index:21;width:58px;height:58px;border-radius:50%;border:none;background:var(--accent);color:#111;font-size:30px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.45)}
+.hidden{display:none!important}
+.section-title{font-size:13px;color:var(--muted);margin:18px 2px 8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.label{font-size:13px;color:var(--muted);margin:16px 0 8px;display:flex;justify-content:space-between;align-items:center}
+.label:first-child{margin-top:0}
+.step{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--card2);border:1px solid var(--line);font-size:11px;margin-right:6px;color:var(--text)}
+.step.ok{background:var(--accent);border-color:var(--accent);color:#111;font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.chip{background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:9px 16px;min-height:44px}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#111;font-weight:700}
+/* 종목 버튼 옆 새 종목 입력칸 */
+.symadd{display:inline-flex;align-items:center;border:1px dashed var(--muted);border-radius:999px;min-height:44px;padding:0 4px 0 12px;flex:1 1 150px;max-width:100%}
+.symadd input{border:none;background:transparent;min-height:40px;padding:0;min-width:0;flex:1;font-size:14px}
+.symadd button{border:none;background:var(--card2);border-radius:999px;min-width:36px;min-height:36px;font-size:18px;color:var(--accent)}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.opt{background:var(--card2);border:1px solid var(--line);border-radius:10px;min-height:44px;padding:6px 2px;font-size:14px}
+.opt.on{background:var(--accent);border-color:var(--accent);color:#111;font-weight:700}
+.score{min-height:56px;font-size:20px;font-weight:700}
+.score.on.s5{background:var(--s5);border-color:var(--s5);color:#fff}
+.score.on.s4{background:var(--s4);border-color:var(--s4);color:#fff}
+.score.on.s3{background:var(--s3);border-color:var(--s3);color:#fff}
+.score.on.s2{background:var(--s2);border-color:var(--s2);color:#fff}
+.score.on.s1{background:var(--s1);border-color:var(--s1);color:#fff}
+.scorelbl{text-align:center;font-size:14px;margin-top:8px;min-height:20px}
+.btn{border:none;border-radius:12px;min-height:48px;padding:0 16px;font-weight:600;background:var(--card2);border:1px solid var(--line)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#111}
+.btn.danger{background:transparent;border-color:var(--danger);color:var(--danger)}
+.btn.small{min-height:36px;padding:0 12px;font-size:13px;border-radius:9px}
+.wide{width:100%}
+.btnrow{display:flex;gap:8px;margin-top:12px}
+.btnrow .btn{flex:1}
+.hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5}
+.warn{font-size:12px;color:var(--accent);margin-top:6px}
+.photos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.ph{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--card2);border:1px solid var(--line)}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.x{position:absolute;top:6px;right:6px;width:32px;height:32px;border-radius:50%;border:none;background:rgba(0,0,0,.7);color:#fff;font-size:15px;z-index:2}
+.addph{display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);font-size:12px;border-style:dashed;text-align:center}
+.addph span{font-size:26px;line-height:1.2}
+.addph.big{grid-column:1/-1;aspect-ratio:auto;min-height:150px;font-size:14px;border-color:var(--accent);color:var(--accent)}
+.addph.big span{font-size:34px}
+.addph.bar{aspect-ratio:auto;min-height:56px;flex-direction:row;gap:8px;font-size:14px}
+.addph.bar span{font-size:20px}
+/* 숨김(display:none) 대신 투명 입력을 덮어서 휴대폰 브라우저·앱 내 미리보기에서도 눌리게 함 */
+.addph input[type=file]{position:absolute;inset:0;width:100%;height:100%;min-height:0;opacity:0;padding:0;border:none;cursor:pointer;z-index:1}
+.bigph{display:flex;flex-direction:column;gap:8px}
+.bigph .one{position:relative}
+.bigph img{width:100%;border-radius:10px;border:1px solid var(--line);display:block}
+.cmp-tag{font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px;background:var(--card2);border:1px solid var(--line)}
+.pcard{display:flex;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:9px;align-items:center}
+.pcard.due{border-color:var(--danger);background:#2a1517}
+.pcard.muted{opacity:.55}
+.thumb{width:64px;height:64px;border-radius:9px;object-fit:cover;background:var(--card2);border:1px solid var(--line);flex:none}
+.thumb.none{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px}
+.pinfo{flex:1;min-width:0}
+.prow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.prow+.prow{margin-top:6px}
+.sym{font-weight:700;font-size:16px}
+.badge{font-size:12px;padding:3px 8px;border-radius:6px;background:var(--card2);border:1px solid var(--line);color:var(--muted)}
+.badge.st-due{background:var(--danger);color:#fff;border-color:var(--danger)}
+.sb{font-size:13px;font-weight:700;padding:3px 9px;border-radius:6px;color:#fff}
+.sb.s5{background:var(--s5)}.sb.s4{background:var(--s4)}.sb.s3{background:var(--s3)}.sb.s2{background:var(--s2)}.sb.s1{background:var(--s1)}
+.right{margin-left:auto;font-size:13px}
+.alert{color:var(--danger);font-weight:700}
+.sub{font-size:12px;color:var(--muted)}
+.empty{text-align:center;color:var(--muted);padding:48px 16px;line-height:1.7}
+.banner .btn{white-space:nowrap;flex:none}
+.banner{background:#2b2410;border:1px solid #5a4710;color:#f3d27a;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:14px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.kv{display:grid;grid-template-columns:80px 1fr;gap:9px 10px;font-size:14px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0}
+.memo{white-space:pre-wrap;line-height:1.6;font-size:14px}
+.symrow{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.symrow:last-child{border-bottom:none}
+.symrow .nm{flex:1;min-width:0}
+.symrow .nm b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iconbtn{background:var(--card2);border:1px solid var(--line);border-radius:9px;min-width:38px;min-height:38px;padding:0 9px;font-size:13px}
+details.fold summary{color:var(--muted);font-size:13px;padding:10px 2px;cursor:pointer}
+.hscroll{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.hscroll::-webkit-scrollbar{display:none}
+.hscroll .chip{flex:none}
+.grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.sumrow{display:flex;justify-content:space-between;align-items:center;font-size:14px;margin:4px 2px 10px}
+.reason1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stats3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 8px;text-align:center}
+.stat b{display:block;font-size:22px;margin-bottom:2px}
+.brow{display:grid;grid-template-columns:64px 1fr 96px;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.brow:last-child{border-bottom:none}
+.brow.w{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 96px}
+.brow.click{cursor:pointer}
+.brow .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brow .v{text-align:right;font-size:13px;white-space:nowrap}
+.bar{height:10px;background:var(--card2);border-radius:5px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:5px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+.scorecard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 14px;margin-bottom:12px}
+.scorecard .big{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.scorecard .big b{font-size:40px;line-height:1;font-variant-numeric:tabular-nums;color:var(--accent)}
+.scorecard .big span{font-size:15px;color:var(--muted)}
+.scorecard .streak{margin-left:auto;font-size:13px;text-align:right;color:var(--muted)}
+.scorecard .streak b{display:block;font-size:20px;color:var(--text)}
+.goalbar{height:12px;background:var(--card2);border-radius:6px;overflow:hidden;margin:12px 0 8px}
+.goalbar i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.goalbar.done i{background:var(--s5)}
+.mrow{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);padding:3px 0}
+.mrow b{color:var(--text);font-variant-numeric:tabular-nums}
+.mand{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mand button{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);border-radius:12px;min-height:56px;padding:8px 12px;text-align:left}
+.mand button .ck{width:24px;height:24px;border-radius:50%;border:2px solid var(--muted);flex:none;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+.mand button.ok{border-color:var(--s5);background:rgba(22,163,74,.12)}
+.mand button.ok .ck{background:var(--s5);border-color:var(--s5);color:#fff}
+.mand button .nm{flex:1;min-width:0;font-weight:700;font-size:15px}
+.mand button .nm small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.soon{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.soon div{background:var(--card2);border:1px dashed var(--line);border-radius:12px;padding:12px 8px;text-align:center;font-size:13px;color:var(--muted)}
+.soon b{display:block;font-size:15px;color:var(--text);margin-bottom:2px}
+.stepper{display:flex;align-items:center;gap:8px}
+.stepper button{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card2);font-size:18px}
+.stepper b{min-width:34px;text-align:center;font-variant-numeric:tabular-nums}
+.srow{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.srow:last-child{border-bottom:none}
+.srow .t{flex:1;min-width:0}
+.rb{font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px;color:#fff}
+.rb.win{background:var(--s5)}.rb.loss{background:var(--danger)}
+.opt.res.win.on{background:var(--s5);border-color:var(--s5);color:#fff}
+.opt.res.loss.on{background:var(--danger);border-color:var(--danger);color:#fff}
+.exrow{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+.exrow:last-child{border-bottom:none}
+.exbtn{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:none;padding:6px 0;min-height:48px;text-align:left}
+.exbtn .ck{width:26px;height:26px;border-radius:50%;border:2px solid var(--muted);flex:none;display:flex;align-items:center;justify-content:center;font-weight:700}
+.exrow.ok .ck{background:var(--c-ex);border-color:var(--c-ex);color:#111}
+.exbtn .nm{flex:1;min-width:0;font-size:15px;font-weight:600}
+.exbtn .nm small{display:block;font-weight:400;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+a.iconbtn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:var(--text)}
+.vt{flex:1;min-width:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vnote{white-space:pre-wrap;line-height:1.55;font-size:14px;margin-top:8px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.chooser{display:grid;gap:8px}
+.chooser button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:left;min-height:60px}
+.chooser button b{font-size:16px}
+.dchart{position:relative;display:flex;align-items:flex-end;gap:2px;height:150px}
+.dcol{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;min-width:0}
+.dstack{display:flex;flex-direction:column-reverse;border-radius:3px 3px 0 0;overflow:hidden;min-height:0}
+.dstack i{display:block;min-height:1px}
+.dgoal{position:absolute;left:0;right:0;border-top:1px dashed var(--muted);pointer-events:none}
+.ddots{display:flex;gap:2px;margin-top:6px}
+.ddots span{flex:1;height:6px;border-radius:3px;background:var(--card2)}
+.ddots span.ok{background:var(--s5)}.ddots span.no{background:var(--danger)}
+.dx{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.stat b small{font-weight:400}
+.alarmbig{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent)}
+.alarmrow{border-top:1px solid var(--line);padding:12px 0;display:flex;align-items:center;gap:10px}
+.alarmrow:first-of-type{border-top:none}
+.alarmrow .t{flex:1;font-size:14px;line-height:1.5}
+.modal-bg{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center}
+.modal{background:var(--card);width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto}
+.modal h3{margin:0 0 12px;font-size:17px}
+.viewer{position:fixed;inset:0;z-index:60;background:#000;display:flex;align-items:center;justify-content:center}
+.viewer img{max-width:100%;max-height:100%;object-fit:contain}
+.viewer .close{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:20px}
+.modal-bg.dlg{z-index:80;align-items:center;padding:0 16px}
+.modal-bg.dlg .modal{border-radius:16px;max-width:420px}
+.dlgmsg{white-space:pre-wrap;line-height:1.6;font-size:15px}
+.calrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.calrow .t{flex:1;min-width:0;font-size:14px}
+a.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:var(--text)}
+.cmp{position:fixed;inset:0;z-index:60;background:#000;display:flex;flex-direction:column;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+.cmp-bar{display:flex;gap:8px;align-items:center;padding:10px 12px}
+.cmp-x{width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:18px;flex:none}
+.cmp-stage{position:relative;flex:1;min-height:0;touch-action:none;overflow:hidden}
+.cmp-lay{position:absolute;inset:0}
+.cmp-img{position:absolute;max-width:none;max-height:none;pointer-events:none;user-select:none;-webkit-user-drag:none}
+.cmp-line{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--accent);pointer-events:none}
+.cmp-lab{position:absolute;top:10px;z-index:2;font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(0,0,0,.65);color:#fff;pointer-events:none}
+.cmp-lab.l{left:10px}.cmp-lab.r{right:10px;color:var(--accent)}
+.cmp-ctl{padding:10px 16px 14px;display:flex;flex-direction:column;gap:8px}
+.cmp-ctl input[type=range]{width:100%;min-height:36px;padding:0;accent-color:var(--accent);background:transparent;border:none}
+.cmp-pick{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted)}
+.cmp-pick input[type=range]{flex:1;min-height:36px;padding:0;accent-color:var(--accent);background:transparent;border:none}
+.cmp-pick .chip{min-height:36px;padding:6px 12px;font-size:13px}
+.toast{position:fixed;left:50%;bottom:calc(140px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:90;background:#2c313c;color:#fff;padding:11px 18px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+.savebar{position:sticky;bottom:calc(10px + env(safe-area-inset-bottom));margin-top:16px}
+.savebar .btn{box-shadow:0 4px 14px rgba(0,0,0,.5)}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="backbtn" id="backBtn" onclick="history.back()" aria-label="뒤로">‹</button>
+  <h1 id="title">트레이딩 훈련 노트</h1>
+  <span class="ver" id="verTop"></span>
+</header>
+<main id="view"></main>
+<button class="fab" id="fab" onclick="App.fab()" aria-label="새로 기록">+</button>
+<nav class="tabbar" id="tabbar">
+  <button data-tab="today" onclick="App.tab('today')"><span class="ic">◎</span>오늘</button>
+  <button data-tab="pred" onclick="App.tab('home')"><span class="ic">⌂</span>예측</button>
+  <button data-tab="bt" onclick="App.tab('backtest')"><span class="ic">▤</span>백테스트</button>
+  <button data-tab="stats" onclick="App.tab('stats')"><span class="ic">▥</span>통계</button>
+  <button data-tab="settings" onclick="App.tab('settings')"><span class="ic">⚙</span>설정</button>
+</nav>
+<div id="modalRoot"></div>
+<div id="dialogRoot"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* =========================== 상수 =========================== */
+const VERSION = 'v1.2.0';
+const APP_ID = 'chart-prediction-journal';
+const DB_NAME = 'chartPredictionJournal';
+const DB_VER = 2;   // v0.7.0: 백테스트·영상·운동 저장소 추가
+// 등록할 때 고르는 시간대 (v0.6.0부터 1분 제외)
+const TIMEFRAMES = ['5분','10분','15분','30분','1시간','2시간','4시간','6시간','8시간','일','주'];
+// 기록·통계 정렬용 (예전 1분 기록도 순서대로 보이게)
+const ALL_TIMEFRAMES = ['1분', '3분', ...TIMEFRAMES];   // 백테스트 시간대(1분·3분 포함), 기록·통계 정렬용
+const STATUS = { waiting: '대기중', due: '확인 필요', done: '검증 완료', canceled: '취소됨' };
+const SCORES = { 5: '완전히 맞음', 4: '대부분 맞음', 3: '반쯤 맞음', 2: '대부분 틀림', 1: '완전히 틀림' };
+const CATEGORIES = ['해외선물','코인','지수','국내주식'];
+const QUICK_TIMES = [{ l: '15분 후', m: 15 }, { l: '30분 후', m: 30 }, { l: '1시간 후', m: 60 }, { l: '4시간 후', m: 240 }, { l: '내일', m: 1440 }];
+const CAL_MODES = { ask: '매번 묻기', always: '항상 추가', never: '추가 안 함' };
+const DEFAULT_SYMBOLS = [
+  { name: '골드', category: '해외선물' },
+  { name: '나스닥', category: '해외선물' },
+  { name: '비트코인', category: '코인' },
+  { name: '코스피', category: '지수' }
+];
+const BACKUP_REMIND_MS = 7 * 24 * 60 * 60 * 1000;
+const TICK_MS = 15000;
+const PERIODS = { today: '오늘', week: '이번 주', month: '이번 달', all: '전체' };
+const REC_PAGE = 30;
+// 링크 버전(claude.ai 링크 페이지) 여부: 그곳에서는 window.claude.use 가 먼저 있음
+const IN_LINK = !!(window.claude && typeof window.claude.use === 'function');
+
+/* =========================== IndexedDB =========================== */
+let db;
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const r = indexedDB.open(DB_NAME, DB_VER);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      if (!d.objectStoreNames.contains('symbols')) d.createObjectStore('symbols', { keyPath: 'id' });
+      if (!d.objectStoreNames.contains('groups')) d.createObjectStore('groups', { keyPath: 'id' });   // v0.1.0 호환용
+      if (!d.objectStoreNames.contains('predictions')) {
+        const s = d.createObjectStore('predictions', { keyPath: 'id' });
+        s.createIndex('groupId', 'groupId');
+        s.createIndex('status', 'status');
+      }
+      if (!d.objectStoreNames.contains('reviews')) d.createObjectStore('reviews', { keyPath: 'predictionId' });
+      if (!d.objectStoreNames.contains('photos')) d.createObjectStore('photos', { keyPath: 'id' });
+      if (!d.objectStoreNames.contains('settings')) d.createObjectStore('settings', { keyPath: 'key' });
+      // v2: 저장소만 추가 (기존 기록은 건드리지 않음)
+      ['techniques', 'backtests', 'videos', 'exercises', 'exerciseLogs'].forEach(n => {
+        if (!d.objectStoreNames.contains(n)) d.createObjectStore(n, { keyPath: 'id' });
+      });
+    };
+    r.onsuccess = () => { db = r.result; resolve(); };
+    r.onerror = () => reject(r.error);
+  });
+}
+const STORES = ['symbols','groups','predictions','reviews','photos','settings','techniques','backtests','videos','exercises','exerciseLogs'];
+// 백업에 들어가는 기록 저장소 (사진·설정은 따로 처리)
+const DATA_STORES = ['symbols','groups','predictions','reviews','techniques','backtests','videos','exercises','exerciseLogs'];
+function reqP(r) { return new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+const getAll = s => reqP(db.transaction(s).objectStore(s).getAll());
+const getOne = (s, k) => reqP(db.transaction(s).objectStore(s).get(k));
+const putOne = (s, v) => reqP(db.transaction(s, 'readwrite').objectStore(s).put(v));
+// 여러 저장소를 한 트랜잭션으로 처리 (중간 실패 시 전체 취소)
+function writeMany(ops) {
+  return new Promise((res, rej) => {
+    if (!ops.length) return res();
+    const names = [...new Set(ops.map(o => o.store))];
+    const t = db.transaction(names, 'readwrite');
+    ops.forEach(o => {
+      const s = t.objectStore(o.store);
+      if (o.type === 'clear') s.clear();
+      else if (o.type === 'delete') s.delete(o.key);
+      else s.put(o.value);
+    });
+    t.oncomplete = () => res();
+    t.onerror = () => rej(t.error);
+    t.onabort = () => rej(t.error || new Error('저장 실패'));
+  });
+}
+
+/* =========================== 유틸 =========================== */
+const $ = id => document.getElementById(id);
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad = n => String(n).padStart(2, '0');
+const WD = ['일','월','화','수','목','금','토'];
+function fmtDate(ms) {
+  if (!ms) return '-';
+  const d = new Date(ms), y = d.getFullYear() !== new Date().getFullYear() ? d.getFullYear() + '/' : '';
+  return `${y}${d.getMonth() + 1}/${d.getDate()}(${WD[d.getDay()]}) ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function toLocalInput(ms) {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function fromLocalInput(s) { if (!s) return null; const t = new Date(s).getTime(); return isNaN(t) ? null : t; }
+function relTime(ms) {
+  const diff = ms - Date.now();
+  const past = diff < 0;
+  const m = Math.floor(Math.abs(diff) / 60000);
+  const d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60), mm = m % 60;
+  let s = d ? `${d}일 ${h}시간` : h ? `${h}시간 ${mm}분` : mm ? `${mm}분` : '1분 미만';
+  return past ? `${s} 지남` : `${s} 남음`;
+}
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2400);
+}
+function stamp() { const d = new Date(); return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`; }
+function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 3000);
+}
+// 화면 안 확인·안내 창 (링크 페이지는 alert·confirm이 막혀 있어서 전부 이것으로)
+let dialogResolve = null;
+function uiDialog(html) {
+  if (dialogResolve) closeDialog(false);
+  return new Promise(res => {
+    dialogResolve = res;
+    $('dialogRoot').innerHTML = `<div class="modal-bg dlg"><div class="modal">${html}</div></div>`;
+  });
+}
+function closeDialog(v) {
+  $('dialogRoot').innerHTML = '';
+  const r = dialogResolve; dialogResolve = null;
+  if (r) r(v);
+}
+function uiAlert(msg) {
+  return uiDialog(`<div class="dlgmsg">${esc(msg)}</div><div class="btnrow"><button class="btn primary" onclick="App.dlg(true)">확인</button></div>`);
+}
+function uiConfirm(msg, okLabel, danger) {
+  return uiDialog(`<div class="dlgmsg">${esc(msg)}</div><div class="btnrow"><button class="btn" onclick="App.dlg(false)">취소</button><button class="btn ${danger ? 'danger' : 'primary'}" onclick="App.dlg(true)">${esc(okLabel || '확인')}</button></div>`);
+}
+// 파일 저장: 링크 버전은 downloads 기능(저장 확인 창), 파일 버전은 일반 다운로드
+async function saveFile(data, name) {
+  if (IN_LINK) {
+    let dl = null;
+    try { dl = await window.claude.use('downloads'); } catch (e) {}
+    if (dl) {
+      try { await dl.save({ filename: name, data }); return true; }
+      catch (e) {
+        if (e && e.code === 'declined') { toast('저장을 취소했어요'); return false; }
+        if (e && e.code === 'rate_limited') { toast('저장 창이 이미 열려 있어요'); return false; }
+        uiAlert('파일을 저장하지 못했어요.\n' + ((e && e.message) || ''));
+        return false;
+      }
+    }
+  }
+  downloadBlob(data instanceof Blob ? data : new Blob([data]), name);
+  return true;
+}
+const mb = n => n == null ? '-' : (n / 1048576 >= 1024 ? (n / 1073741824).toFixed(2) + 'GB' : (n / 1048576).toFixed(1) + 'MB');
+function symName(id) { const s = symMap[id]; return s ? s.name : '(삭제된 종목)'; }
+function predLine(p) { return `${symName(p.symbolId)} ${p.timeframe}`; }
+function scoreBadge(r) { return r && r.score ? `<span class="sb s${r.score}">${r.score}점</span>` : ''; }
+
+/* =========================== 사진 =========================== */
+// 이미지 읽기: createImageBitmap 우선, 안 되면 <img>로 시도
+async function loadImage(file) {
+  if (window.createImageBitmap) {
+    try { const bm = await createImageBitmap(file); return { w: bm.width, h: bm.height, src: bm }; } catch (e) {}
+  }
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => {
+      const im = new Image();
+      const t = setTimeout(() => rej(new Error('시간 초과')), 15000);
+      im.onload = () => { clearTimeout(t); res(im); };
+      im.onerror = () => { clearTimeout(t); rej(new Error('이미지를 읽지 못함')); };
+      im.src = url;
+    });
+    return { w: img.naturalWidth, h: img.naturalHeight, src: img, url };
+  } catch (e) { URL.revokeObjectURL(url); throw e; }
+}
+// 사진 압축: 긴 변 1280px(백테스트는 1080px), JPEG 0.85. 실패하면 원본 그대로 저장
+async function compressImage(file, maxSide = 1280) {
+  let im;
+  try { im = await loadImage(file); } catch (e) { return file; }
+  try {
+    const r = Math.min(1, maxSide / Math.max(im.w, im.h));
+    const w = Math.max(1, Math.round(im.w * r)), h = Math.max(1, Math.round(im.h * r));
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    cv.getContext('2d').drawImage(im.src, 0, 0, w, h);
+    let blob = await new Promise(res => { try { cv.toBlob(b => res(b), 'image/jpeg', 0.85); } catch (e) { res(null); } });
+    if (!blob) { try { blob = dataURLToBlob(cv.toDataURL('image/jpeg', 0.85)); } catch (e) { blob = null; } }
+    return blob || file;
+  } catch (e) {
+    return file;
+  } finally {
+    if (im.url) URL.revokeObjectURL(im.url);
+    if (im.src && im.src.close) im.src.close();
+  }
+}
+function blobToDataURL(blob) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
+}
+function dataURLToBlob(dataUrl) {
+  const [head, b64] = dataUrl.split(',');
+  const mime = (head.match(/data:([^;]+)/) || [])[1] || 'image/jpeg';
+  const bin = atob(b64), arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+// 저장된 사진 표시용 URL 캐시
+const photoUrls = new Map();
+function photoUrl(photo) {
+  if (!photoUrls.has(photo.id)) photoUrls.set(photo.id, URL.createObjectURL(photo.blob));
+  return photoUrls.get(photo.id);
+}
+// 파일 선택 → 압축 → 목록 반환
+async function readPhotoFiles(input, maxSide) {
+  const files = Array.from(input.files || []);
+  try { input.value = ''; } catch (e) {}
+  const out = [];
+  if (!files.length) return out;
+  toast(`사진 ${files.length}장 처리 중…`);
+  for (const f of files) {
+    try {
+      const blob = await compressImage(f, maxSide || 1280);
+      out.push({ blob, url: URL.createObjectURL(blob), isNew: true });
+    } catch (e) { await uiAlert('사진을 읽지 못했어요: ' + (f.name || '')); }
+  }
+  if (out.length) toast(`사진 ${out.length}장 추가`);
+  return out;
+}
+async function loadPhotos(ids) {
+  const out = [];
+  for (const id of (ids || [])) { const ph = await getOne('photos', id); if (ph) out.push(ph); }
+  return out;
+}
+function bigPhotos(list) {
+  return `<div class="bigph">${list.map(ph => `<img src="${photoUrl(ph)}" onclick="App.viewImg('${photoUrl(ph)}')" alt="">`).join('')}</div>`;
+}
+
+/* =========================== 상태 =========================== */
+let S = null;            // 설정
+let symbols = [];        // 종목 목록 (순서대로)
+let symMap = {};
+let view = 'today', params = {}, stack = [];
+let form = null;         // 예측 작성 상태
+let rv = null;           // 검증 작성 상태
+let skipLeaveConfirm = false;
+let pendingImport = null;
+
+const DEFAULT_SCORES = { mandatory: 5, review: 2, backtest: 1, backtestGoal: 20, backtestBonus: 5, videoFirst: 5, videoMore: 2 };
+const DEFAULT_GOAL = 60;
+const MANDATORY_NAMES = ['골드', '나스닥', '비트코인', '코스피'];
+function defaultSettings() {
+  return { key: 'main', seeded: false, defaultTimeframe: '15분', lastBackup: null, lastSymbolId: null,
+    calendarMode: 'ask', alarmSound: true, alarmVibrate: true,
+    mandatorySymbolIds: null, scores: { ...DEFAULT_SCORES }, dailyGoal: DEFAULT_GOAL, lastNightRemind: '' };
+}
+async function loadSettings() {
+  const saved = await getOne('settings', 'main');
+  S = { ...defaultSettings(), ...(saved || {}) };
+  S.scores = { ...DEFAULT_SCORES, ...(S.scores || {}) };   // 새로 생긴 점수 항목은 기본값으로
+  if (!TIMEFRAMES.includes(S.defaultTimeframe)) S.defaultTimeframe = '5분';   // 1분이 빠져서 기본값 조정   // 이전 버전 설정은 두고 빠진 값만 기본값으로 채움
+}
+const saveSettings = () => putOne('settings', S);
+async function loadSymbols() {
+  symbols = (await getAll('symbols')).sort((a, b) => a.order - b.order);
+  symMap = Object.fromEntries(symbols.map(s => [s.id, s]));
+  // 필수 종목이 아직 정해지지 않았으면 기본 4종목을 이름으로 찾아 지정
+  if (!Array.isArray(S.mandatorySymbolIds)) {
+    S.mandatorySymbolIds = MANDATORY_NAMES.map(n => (symbols.find(x => x.name === n) || {}).id).filter(Boolean);
+    await saveSettings();
+  }
+}
+function mandatoryList() { return (S.mandatorySymbolIds || []).filter(id => symMap[id]).sort((a, b) => symMap[a].order - symMap[b].order); }
+async function seedIfNeeded() {
+  if (S.seeded) return;
+  const ops = DEFAULT_SYMBOLS.map((s, i) => ({ store: 'symbols', type: 'put', value: { id: uid(), ...s, order: i } }));
+  S.seeded = true;
+  ops.push({ store: 'settings', type: 'put', value: S });
+  await writeMany(ops);
+}
+// 새 종목 추가 (같은 이름이 있으면 그 종목을 돌려줌)
+async function addSymbolByName(name, category) {
+  name = (name || '').trim();
+  if (!name) return null;
+  const found = symbols.find(s => s.name === name);
+  if (found) return found;
+  const s = { id: uid(), name, category: category || '국내주식', order: symbols.length ? Math.max(...symbols.map(x => x.order)) + 1 : 0 };
+  await putOne('symbols', s);
+  await loadSymbols();
+  return s;
+}
+// 예정 시간이 지난 대기중 예측 → 확인 필요. 바뀐 예측 목록을 돌려줌
+async function refreshStatuses() {
+  const now = Date.now();
+  const ps = await getAll('predictions');
+  const changed = ps.filter(p => p.status === 'waiting' && p.expectedAt <= now).map(p => ({ ...p, status: 'due' }));
+  await writeMany(changed.map(p => ({ store: 'predictions', type: 'put', value: p })));
+  return changed;
+}
+async function reviewMap() {
+  return Object.fromEntries((await getAll('reviews')).map(r => [r.predictionId, r]));
+}
+
+/* =========================== 화면 이동 =========================== */
+const TITLES = { today: '트레이딩 훈련 노트', home: '예측', records: '예측', backtest: '백테스트', stats: '통계', settings: '설정', form: '새 예측', detail: '예측 상세', review: '검증',
+  tech: '기법', btform: '새 백테스트', btdetail: '백테스트', videoform: '영상 공부', videos: '영상 공부 목록' };
+// 화면 → 아래 탭 (예측 탭은 진행 중·검증 완료 두 화면)
+const TAB_OF = { today: 'today', home: 'pred', records: 'pred', backtest: 'bt', stats: 'stats', settings: 'settings' };
+const SUB_VIEWS = ['form', 'detail', 'review', 'tech', 'btform', 'btdetail', 'videoform', 'videos'];
+function isSub(v) { return SUB_VIEWS.includes(v); }
+function isDirty() {
+  return (view === 'form' && form && form.dirty) || (view === 'review' && rv && rv.dirty)
+    || (view === 'btform' && bf && bf.dirty) || (view === 'videoform' && vf && vf.dirty);
+}
+function pushPage(v, p) {
+  stack.push({ view, params });
+  view = v; params = p || {};
+  history.pushState({ depth: stack.length }, '');
+  window.scrollTo(0, 0);
+  render();
+}
+window.addEventListener('popstate', async () => {
+  if (!stack.length) return;
+  if (isDirty() && !skipLeaveConfirm) {
+    history.pushState({ depth: stack.length }, '');   // 일단 화면에 머물고 물어봄
+    if (await uiConfirm('저장하지 않은 내용이 사라집니다. 나갈까요?', '나가기', true)) { skipLeaveConfirm = true; history.back(); }
+    return;
+  }
+  skipLeaveConfirm = false;
+  let pendingCal = null;   // 연속 등록 중 저장한 예측 → 나갈 때 캘린더 추가를 물음
+  if (view === 'form') { pendingCal = form && form.calIds && form.calIds.length ? form.calIds.slice() : null; cleanupForm(); }
+  if (view === 'review') cleanupReview();
+  if (view === 'btform') cleanupBt();
+  if (view === 'videoform') vf = null;
+  const prev = stack.pop();
+  view = prev.view; params = prev.params;
+  window.scrollTo(0, 0);
+  render();
+  if (pendingCal) setTimeout(() => afterSaveCalendar(pendingCal, 'new'), 350);
+});
+function leaveSub() { skipLeaveConfirm = true; history.back(); }
+
+async function render() {
+  $('title').textContent = view === 'form' && form && form.mode === 'edit' ? '예측 수정' : TITLES[view];
+  $('backBtn').style.display = isSub(view) ? 'block' : 'none';
+  $('tabbar').classList.toggle('hidden', isSub(view));
+  $('fab').classList.toggle('hidden', !['today', 'home', 'records', 'backtest'].includes(view));
+  document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === TAB_OF[view]));
+  if (view === 'today') return renderToday();
+  if (view === 'backtest') return renderBacktest();
+  if (view === 'tech') return renderTech();
+  if (view === 'btform') return renderBtForm();
+  if (view === 'btdetail') return renderBtDetail();
+  if (view === 'videoform') return renderVideoForm();
+  if (view === 'videos') return renderVideos();
+  if (view === 'home') return renderHome();
+  if (view === 'records') return renderRecords();
+  if (view === 'stats') return renderStats();
+  if (view === 'settings') return renderSettings();
+  if (view === 'form') return renderForm();
+  if (view === 'detail') return renderDetail();
+  if (view === 'review') return renderReview();
+}
+// 다른 창이 덮고 있을 때는 홈을 다시 그리지 않음
+function overlayOpen() { return !!($('modalRoot').innerHTML || $('dialogRoot').innerHTML); }
+
+/* =========================== 오늘 =========================== */
+// 한국 시간(휴대폰 시간) 기준 날짜 키 'YYYY-MM-DD'
+function dayKey(ms) { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function addDays(key, n) { const [y, m, d] = key.split('-').map(Number); return dayKey(new Date(y, m - 1, d + n).getTime()); }
+// 날짜별 점수 계산 (기록에서 계산, 저장하지 않음)
+async function dayStats() {
+  const ps = await getAll('predictions'), rs = await getAll('reviews');
+  const bts = await getAll('backtests'), vids = await getAll('videos'), logs = await getAll('exerciseLogs'), exs = await getAll('exercises');
+  const exMap = Object.fromEntries(exs.map(e => [e.id, e]));
+  const mand = mandatoryList(), sc = S.scores, days = {};
+  const D = k => days[k] || (days[k] = { mandDone: new Set(), reviews: 0, backtests: 0, videos: 0, videoOk: 0, exPts: 0, exDone: new Set() });
+  ps.forEach(p => { if (p.status !== 'canceled' && mand.includes(p.symbolId)) D(dayKey(p.createdAt)).mandDone.add(p.symbolId); });
+  rs.forEach(r => { if (r.score && r.reviewedAt) D(dayKey(r.reviewedAt)).reviews++; });
+  bts.forEach(b => D(dayKey(b.createdAt)).backtests++);
+  vids.forEach(v => { const d = D(dayKey(v.createdAt)); d.videos++; if ((v.note || '').trim().length >= 30) d.videoOk++; });
+  logs.forEach(l => { const d = D(l.day); if (!d.exDone.has(l.exerciseId)) { d.exDone.add(l.exerciseId); d.exPts += (exMap[l.exerciseId] || {}).points || 0; } });
+  const scoreOf = k => {
+    const d = days[k];
+    if (!d) return { total: 0, parts: { mandatory: 0, review: 0, backtest: 0, video: 0, exercise: 0 }, d: D(k), complete: mand.length > 0 && false };
+    const parts = {
+      mandatory: d.mandDone.size * sc.mandatory,
+      review: d.reviews * sc.review,
+      backtest: d.backtests * sc.backtest + (d.backtests >= sc.backtestGoal ? sc.backtestBonus : 0),
+      video: d.videoOk ? sc.videoFirst + (d.videoOk - 1) * sc.videoMore : 0,
+      exercise: d.exPts
+    };
+    return { total: Object.values(parts).reduce((a, b) => a + b, 0), parts, d, complete: mand.length > 0 && mand.every(id => d.mandDone.has(id)) };
+  };
+  const complete = k => { const d = days[k]; return !!d && mand.length > 0 && mand.every(id => d.mandDone.has(id)); };
+  // 연속 달성일: 오늘을 끝낸 상태면 오늘부터, 아직이면 어제부터 거꾸로 셈
+  const today = dayKey(Date.now());
+  let k = complete(today) ? today : addDays(today, -1), streak = 0;
+  while (complete(k) && streak < 3650) { streak++; k = addDays(k, -1); }
+  const firstDay = Object.keys(days).filter(x => x <= today).sort()[0] || today;   // 기록이 시작된 날
+  return { scoreOf, complete, streak, today, ps, firstDay };
+}
+async function renderToday() {
+  const st = await dayStats(), t = st.today, sc = st.scoreOf(t), goal = S.dailyGoal || DEFAULT_GOAL;
+  const pct = Math.min(100, Math.round(sc.total / goal * 100));
+  const mand = mandatoryList(), d = sc.d;
+  const todayPs = st.ps.filter(p => p.status !== 'canceled' && dayKey(p.createdAt) === t);
+  const due = st.ps.filter(p => p.status === 'due').sort((a, b) => a.expectedAt - b.expectedAt);
+  const rmap = await reviewMap();
+  const now = new Date();
+  let h = '';
+  try {
+    const e = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null;
+    if (e && e.quota && e.usage / e.quota > 0.8) {
+      h += `<div class="banner"><span>저장 공간이 ${Math.round(e.usage / e.quota * 100)}% 찼어요.<br><span class="sub" style="color:#c9ad5f">설정에서 오래된 사진을 정리하세요.</span></span><button class="btn small primary" onclick="App.tab('settings')">정리</button></div>`;
+    }
+  } catch (e) {}
+  if (st.ps.length && (!S.lastBackup || Date.now() - S.lastBackup > BACKUP_REMIND_MS)) {
+    h += `<div class="banner"><span>${S.lastBackup ? '마지막 백업 후 7일이 지났어요.' : '아직 백업한 적이 없어요.'}<br><span class="sub" style="color:#c9ad5f">브라우저 데이터가 지워지면 기록이 사라질 수 있어요.</span></span><button class="btn small primary" onclick="App.exportBackup()">백업</button></div>`;
+  }
+  const doneToday = st.complete(t);
+  const P = sc.parts;
+  h += `<section class="scorecard">
+    <div class="sub" style="margin-bottom:8px">${now.getMonth() + 1}월 ${now.getDate()}일 ${WD[now.getDay()]}요일</div>
+    <div class="big"><b>${sc.total}</b><span>/ ${goal}점</span>
+      <div class="streak"><b>${st.streak}일</b>연속 달성</div></div>
+    <div class="goalbar ${sc.total >= goal ? 'done' : ''}"><i style="width:${pct}%"></i></div>
+    <div class="mrow"><span>필수 차트 분석</span><b>${P.mandatory}점</b></div>
+    <div class="mrow"><span>예측 검증</span><b>${P.review}점</b></div>
+    ${P.backtest ? `<div class="mrow"><span>백테스트</span><b>${P.backtest}점</b></div>` : ''}
+    ${P.video ? `<div class="mrow"><span>영상 공부</span><b>${P.video}점</b></div>` : ''}
+    ${P.exercise ? `<div class="mrow"><span>운동</span><b>${P.exercise}점</b></div>` : ''}
+    <div class="sub" style="margin-top:6px">${sc.total >= goal ? '오늘 목표를 채웠어요.' : `목표까지 ${goal - sc.total}점 남았어요.`} ${doneToday ? '필수 분석 완료.' : '필수 분석을 모두 하면 연속 달성일이 이어져요.'}</div>
+  </section>`;
+  // 필수 차트 분석
+  const cnt = mand.filter(id => d.mandDone.has(id)).length;
+  h += `<div class="section-title"><span>필수 차트 분석 ${cnt} / ${mand.length}</span><span>종목당 ${S.scores.mandatory}점</span></div>`;
+  if (!mand.length) h += `<section class="card"><div class="sub">필수 종목이 없어요. 설정에서 정하세요.</div></section>`;
+  else h += `<div class="mand">${mand.map(id => {
+    const ok = d.mandDone.has(id), tfs = [...new Set(todayPs.filter(p => p.symbolId === id).map(p => p.timeframe))];
+    return `<button class="${ok ? 'ok' : ''}" onclick="App.newPrediction('${id}')"><span class="ck">${ok ? '✓' : ''}</span><span class="nm">${esc(symName(id))}<small>${ok ? esc(tfs.join(' · ')) : '아직 안 함'}</small></span></button>`;
+  }).join('')}</div>`;
+  // 확인 필요
+  h += `<div class="section-title"><span>확인 필요 ${due.length}</span><span>검증 1건 ${S.scores.review}점</span></div>`;
+  h += due.length ? await cardsHtml(due, rmap) : `<div class="sub" style="padding:2px 2px 6px">지금 검증할 예측이 없어요.</div>`;
+  // 백테스트
+  const btGoal = S.scores.backtestGoal, btN = d.backtests;
+  h += `<div class="section-title"><span>백테스트 ${btN} / ${btGoal}</span><span>${P.backtest}점</span></div>
+    <section class="card"><div class="goalbar ${btN >= btGoal ? 'done' : ''}" style="margin-top:0"><i style="width:${Math.min(100, Math.round(btN / btGoal * 100))}%"></i></div>
+      <div class="btnrow" style="margin-top:4px"><button class="btn primary" onclick="App.newBt()">＋ 백테스트 추가</button><button class="btn" onclick="App.tab('backtest')">기법별 보기</button></div></section>`;
+  // 영상 공부
+  const vids = (await getAll('videos')).filter(v => dayKey(v.createdAt) === t);
+  h += `<div class="section-title"><span>영상 공부 ${vids.length} / 1</span><span>${P.video}점</span></div><section class="card">
+    ${vids.map(v => `<div class="srow" onclick="App.editVideo('${v.id}')"><span class="t"><b>${esc(v.title || videoHost(v.url))}</b><br><span class="sub">${(v.note || '').trim().length >= VIDEO_MIN ? '✓ 점수 인정' : VIDEO_MIN + '자 미만 · 점수 없음'}</span></span></div>`).join('')}
+    <div class="btnrow" style="margin-top:${vids.length ? 12 : 0}px"><button class="btn ${vids.length ? '' : 'primary'}" onclick="App.newVideo()">＋ 영상 기록</button><button class="btn" onclick="App.openVideos()">영상 목록</button></div></section>`;
+  // 운동
+  const exs = await activeExercises(), logs = (await getAll('exerciseLogs')).filter(l => l.day === t);
+  h += `<div class="section-title"><span>운동 ${d.exDone.size}개</span><span>${P.exercise}점</span></div><section class="card" style="padding-top:6px;padding-bottom:6px">
+    ${exs.length ? exs.map(e => {
+      const l = logs.find(x => x.exerciseId === e.id);
+      return `<div class="exrow ${l ? 'ok' : ''}"><button class="exbtn" onclick="App.toggleEx('${e.id}')"><span class="ck">${l ? '✓' : ''}</span><span class="nm">${esc(e.name)}<small>${e.points}점${l && l.memo ? ' · ' + esc(l.memo) : ''}</small></span></button>
+        ${l ? `<button class="iconbtn" onclick="App.exMemo('${l.id}')">메모</button>` : ''}
+        ${e.link ? `<a class="iconbtn" href="${esc(e.link)}" target="_blank" rel="noopener" aria-label="${esc(e.name)} 영상">▶</a>` : ''}</div>`;
+    }).join('') : '<div class="sub" style="padding:10px 0">설정에서 운동 항목을 추가하세요.</div>'}
+  </section>`;
+  $('view').innerHTML = h;
+}
+// 오후 9시 이후 필수 분석이 남았으면 하루 한 번 알림 (앱이 열려 있을 때만)
+async function nightRemind() {
+  const now = new Date();
+  if (now.getHours() < 21) return;
+  const t = dayKey(now.getTime());
+  if (S.lastNightRemind === t || overlayOpen()) return;
+  const st = await dayStats(), d = st.scoreOf(t).d, left = mandatoryList().filter(id => !d.mandDone.has(id));
+  S.lastNightRemind = t; await saveSettings();
+  if (!left.length) return;
+  beep(); vibrate();
+  const ok = await uiConfirm(`오늘 필수 차트 분석이 ${left.length}개 남았어요.\n${left.map(symName).join(', ')}`, '지금 분석하기');
+  if (ok) App.newPrediction(left[0]);
+}
+
+/* =========================== 예측 탭 =========================== */
+function predSeg(cur) {
+  return `<div class="seg"><button class="opt ${cur === 'home' ? 'on' : ''}" onclick="App.tab('home')">진행 중</button><button class="opt ${cur === 'records' ? 'on' : ''}" onclick="App.tab('records')">검증 완료</button></div>`;
+}
+function predCard(p, thumbUrl, review) {
+  let right;
+  if (p.status === 'waiting') right = relTime(p.expectedAt);
+  else if (p.status === 'due') right = `<span class="alert">확인 필요</span>`;
+  else if (p.status === 'done' && review && review.score) right = scoreBadge(review);
+  else right = STATUS[p.status];
+  const n = (p.photoIds || []).length;
+  const go = p.status === 'due' ? `App.openReview('${p.id}')` : `App.openDetail('${p.id}')`;
+  return `<div class="pcard ${p.status === 'due' ? 'due' : ''} ${p.status === 'canceled' ? 'muted' : ''}" onclick="${go}">
+    ${thumbUrl ? `<img class="thumb" src="${thumbUrl}" alt="">` : '<div class="thumb none">사진 없음</div>'}
+    <div class="pinfo">
+      <div class="prow"><span class="sym">${esc(symName(p.symbolId))}</span><span class="badge">${esc(p.timeframe)}</span><span class="right">${right}</span></div>
+      <div class="prow sub">${fmtDate(p.expectedAt)} 예정${n > 1 ? ` · 사진 ${n}장` : ''}</div>
+      ${p.memo ? `<div class="sub reason1" style="margin-top:4px">${esc(p.memo.split('\n')[0])}</div>` : ''}
+    </div>
+  </div>`;
+}
+async function cardsHtml(list, rmap) {
+  const out = [];
+  for (const p of list) {
+    const first = (p.photoIds || [])[0];
+    const ph = first ? await getOne('photos', first) : null;
+    out.push(predCard(p, ph ? photoUrl(ph) : '', rmap && rmap[p.id]));
+  }
+  return out.join('');
+}
+async function renderHome() {
+  const ps = await getAll('predictions');
+  const rmap = await reviewMap();
+  const due = ps.filter(p => p.status === 'due').sort((a, b) => a.expectedAt - b.expectedAt);
+  const waiting = ps.filter(p => p.status === 'waiting').sort((a, b) => a.expectedAt - b.expectedAt);
+  const done = ps.filter(p => p.status === 'done').sort((a, b) => ((rmap[b.id] || {}).reviewedAt || b.expectedAt) - ((rmap[a.id] || {}).reviewedAt || a.expectedAt)).slice(0, 20);
+  const canceled = ps.filter(p => p.status === 'canceled').sort((a, b) => b.expectedAt - a.expectedAt);
+  let h = predSeg('home');
+  if (due.length) {
+    h += `<div class="section-title"><span>확인 필요 ${due.length}</span><span>눌러서 검증</span></div>`;
+    h += await cardsHtml(due, rmap);
+  }
+  h += `<div class="section-title"><span>대기중 ${waiting.length}</span></div>`;
+  if (waiting.length) h += await cardsHtml(waiting, rmap);
+  else if (!due.length && !done.length) h += `<div class="empty">대기중인 예측이 없어요.<br>오른쪽 아래 <b>+</b> 버튼으로 예측을 등록하세요.</div>`;
+  else h += `<div class="sub" style="padding:4px 2px 8px">대기중인 예측이 없어요.</div>`;
+  if (done.length) h += `<details class="fold"><summary>최근 검증 완료 ${done.length}</summary>${await cardsHtml(done, rmap)}</details>`;
+  if (canceled.length) h += `<details class="fold"><summary>취소된 예측 ${canceled.length}</summary>${await cardsHtml(canceled, rmap)}</details>`;
+  $('view').innerHTML = h;
+}
+
+/* =========================== 예측 작성 / 수정 =========================== */
+function startNewForm(presetSymbolId) {
+  const symId = presetSymbolId && symMap[presetSymbolId] ? presetSymbolId
+    : (S.lastSymbolId && symMap[S.lastSymbolId]) ? S.lastSymbolId : (symbols[0] ? symbols[0].id : '');
+  form = { mode: 'new', symbolId: symId, timeframe: S.defaultTimeframe, photos: [], memo: '', expectedAt: '', removedPhotoIds: [], dirty: false, calIds: [], savedTfs: [] };
+}
+async function startEditForm(id) {
+  const p = await getOne('predictions', id);
+  if (!p) return false;
+  const photos = (await loadPhotos(p.photoIds)).map(ph => ({ id: ph.id, blob: ph.blob, url: photoUrl(ph), isNew: false }));
+  form = { mode: 'edit', orig: p, symbolId: p.symbolId, timeframe: p.timeframe, photos, memo: p.memo || '',
+    expectedAt: toLocalInput(p.expectedAt), removedPhotoIds: [], dirty: false };
+  return true;
+}
+function cleanupForm() {
+  if (!form) return;
+  form.photos.forEach(ph => { if (ph.isNew) URL.revokeObjectURL(ph.url); });
+  form = null;
+}
+function renderForm() {
+  if (!form) { $('view').innerHTML = ''; return; }
+  const f = form;
+  const step = (n, ok) => `<span class="step ${ok ? 'ok' : ''}">${ok ? '✓' : n}</span>`;
+  const symBtns = symbols.map(s => `<button class="chip ${f.symbolId === s.id ? 'on' : ''}" onclick="App.setF('symbolId','${s.id}')">${esc(s.name)}</button>`).join('');
+  const symAdd = `<span class="symadd"><input id="newSym" placeholder="다른 종목 입력" maxlength="30" enterkeyhint="done" onkeydown="if(event.key==='Enter'){event.preventDefault();App.addSymInline();}"><button onclick="App.addSymInline()" aria-label="종목 추가">＋</button></span>`;
+  const tfList = f.timeframe && !TIMEFRAMES.includes(f.timeframe) ? [f.timeframe, ...TIMEFRAMES] : TIMEFRAMES;
+  const tfBtns = tfList.map(t => `<button class="opt ${f.timeframe === t ? 'on' : ''}" onclick="App.setF('timeframe','${t}')">${t}</button>`).join('');
+  const photos = f.photos.map((ph, j) => `<div class="ph"><img src="${ph.url}" onclick="App.viewImg('${ph.url}')" alt=""><button class="x" onclick="App.removePhoto(${j})">✕</button></div>`).join('');
+  const addBox = f.photos.length
+    ? `<div class="ph addph"><span>＋</span>더 추가<input type="file" accept="image/*" multiple onchange="App.addPhotos(this)"></div>`
+    : `<div class="ph addph big"><span>📷</span>예상 경로를 그린 차트 사진 첨부<input type="file" accept="image/*" multiple onchange="App.addPhotos(this)"></div>`;
+  const expMs = fromLocalInput(f.expectedAt);
+  const expHint = expMs ? `<div class="${expMs <= Date.now() ? 'warn' : 'hint'}" style="font-size:14px">${fmtDate(expMs)} · ${relTime(expMs)}</div>` : '';
+  const contNote = f.savedTfs && f.savedTfs.length
+    ? `<div class="banner" style="margin-bottom:12px"><span>이번 분석에서 저장함: <b>${f.savedTfs.map(esc).join(', ')}</b><br><span class="sub" style="color:#c9ad5f">같은 종목·사진·분석 글이 들어가 있어요. 시간대와 예정 시간만 고르세요.</span></span></div>` : '';
+  $('view').innerHTML = `${contNote}
+    <section class="card">
+      <div class="label"><span>${step(1, !!f.symbolId)}종목</span></div>
+      <div class="chips">${symBtns}${symAdd}</div>
+      <div class="label"><span>${step(2, !!f.timeframe)}시간대</span></div>
+      <div class="grid4">${tfBtns}</div>
+      <div class="label"><span>${step(3, f.photos.length > 0)}사진</span><span>${f.photos.length ? f.photos.length + '장' : ''}</span></div>
+      <div class="photos">${photos}${addBox}</div>
+      <div class="label"><span>${step(4, !!f.memo.trim())}분석 글 (선택)</span><span id="memoLen">${f.memo.trim().length ? f.memo.trim().length + '자' : ''}</span></div>
+      <textarea placeholder="왜 이렇게 예상했는지 (60MA 방향, 파동, 지지·저항, 진입 계획 등)" oninput="App.inMemo(this.value)">${esc(f.memo)}</textarea>
+      <div class="label"><span>${step(5, !!expMs && expMs > Date.now())}예정 시간</span></div>
+      <div class="grid3">${QUICK_TIMES.map(q => `<button class="opt" onclick="App.quick(${q.m})">${q.l}</button>`).join('')}</div>
+      <input type="datetime-local" style="margin-top:8px" value="${f.expectedAt}" onchange="App.setF('expectedAt',this.value)">
+      ${expHint}
+    </section>
+    <div class="savebar">${f.mode === 'edit'
+      ? `<button class="btn primary wide" onclick="App.saveForm(false)">수정 저장</button>`
+      : `<div class="btnrow" style="margin-top:0"><button class="btn" style="font-size:14px" onclick="App.saveForm(true)">저장 + 다른 시간대</button><button class="btn primary" onclick="App.saveForm(false)">저장</button></div>`}</div>`;
+}
+async function saveForm(cont) {
+  const f = form, errors = [];
+  if (!f.symbolId || !symMap[f.symbolId]) errors.push('종목을 선택하세요.');
+  if (!f.timeframe) errors.push('시간대를 선택하세요.');
+  if (!f.photos.length) errors.push('사진을 1장 이상 첨부하세요.');
+  const exp = fromLocalInput(f.expectedAt);
+  if (!exp) errors.push('예정 시간을 정하세요.');
+  else if ((f.mode === 'new' || exp !== f.orig.expectedAt) && exp <= Date.now()) errors.push('예정 시간이 이미 지났어요.');
+  if (errors.length) { uiAlert(errors.join('\n')); return; }
+  const now = Date.now(), ops = [];
+  const pid = f.mode === 'edit' ? f.orig.id : uid();
+  const photoIds = [];
+  f.photos.forEach(ph => {
+    if (ph.isNew) {
+      const id = uid(); photoIds.push(id);
+      ops.push({ store: 'photos', type: 'put', value: { id, blob: ph.blob, predictionId: pid, kind: 'analysis', createdAt: now } });
+    } else photoIds.push(ph.id);
+  });
+  f.removedPhotoIds.forEach(id => ops.push({ store: 'photos', type: 'delete', key: id }));
+  let calendarReason = null;
+  if (f.mode === 'new') {
+    ops.push({ store: 'predictions', type: 'put', value: {
+      id: pid, symbolId: f.symbolId, timeframe: f.timeframe, photoIds, memo: f.memo.trim(),
+      createdAt: now, expectedAt: exp, calendarAdded: false, status: 'waiting', updatedAt: now
+    } });
+    calendarReason = 'new';
+  } else {
+    const p = f.orig;
+    const status = p.status === 'canceled' || p.status === 'done' ? p.status : (exp > now ? 'waiting' : 'due');
+    ops.push({ store: 'predictions', type: 'put', value: { ...p, symbolId: f.symbolId, timeframe: f.timeframe, photoIds, memo: f.memo.trim(), expectedAt: exp, status, updatedAt: now } });
+    if (exp !== p.expectedAt && status === 'waiting') calendarReason = 'timeChanged';
+  }
+  try { await writeMany(ops); }
+  catch (e) { uiAlert('저장에 실패했어요. 저장 공간이 부족할 수 있어요.\n' + (e && e.message ? e.message : '')); return; }
+  S.lastSymbolId = f.symbolId; await saveSettings();
+  if (cont && f.mode === 'new') {
+    // 연속 등록: 같은 종목·같은 사진으로 새 등록 화면 (사진은 새 예측용으로 다시 저장됨)
+    const next = { mode: 'new', symbolId: f.symbolId, timeframe: '', memo: f.memo, expectedAt: '', removedPhotoIds: [], dirty: false,
+      photos: f.photos.map(ph => ({ blob: ph.blob, url: URL.createObjectURL(ph.blob), isNew: true })),
+      calIds: [...(f.calIds || []), pid], savedTfs: [...(f.savedTfs || []), f.timeframe] };
+    f.photos.forEach(ph => { if (ph.isNew) URL.revokeObjectURL(ph.url); });
+    form = next;
+    window.scrollTo(0, 0); renderForm();
+    toast(`${f.timeframe} 저장 · 다른 시간대를 고르세요`);
+    return;
+  }
+  const calIds = f.mode === 'new' ? [...(f.calIds || []), pid] : (calendarReason ? [pid] : []);
+  f.calIds = [];   // 나갈 때 다시 묻지 않도록 비움
+  toast(f.mode === 'edit' ? '수정했어요' : `저장했어요 · ${fmtDate(exp)} 확인`);
+  leaveSub();
+  if (calendarReason && calIds.length) setTimeout(() => afterSaveCalendar(calIds, calendarReason), 350);
+}
+
+/* =========================== 알람 A: 캘린더(.ics) =========================== */
+function icsEsc(s) { return String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); }
+function icsDate(ms) { return new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); }
+// 한 줄 75바이트 제한에 맞춰 줄 접기 (한글 3바이트 고려)
+function icsFold(line) {
+  const enc = new TextEncoder(), out = [];
+  let cur = '', bytes = 0;
+  for (const ch of line) {
+    const b = enc.encode(ch).length;
+    if (bytes + b > 74) { out.push(cur); cur = ' ' + ch; bytes = 1 + b; }
+    else { cur += ch; bytes += b; }
+  }
+  out.push(cur);
+  return out.join('\r\n');
+}
+function buildICS(preds) {
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ChartPredictionJournal//KO', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
+  preds.forEach(p => {
+    lines.push('BEGIN:VEVENT',
+      `UID:${p.id}@chart-prediction-journal`,
+      `SEQUENCE:${Math.floor((p.updatedAt || p.createdAt) / 1000)}`,
+      `DTSTAMP:${icsDate(Date.now())}`,
+      `DTSTART:${icsDate(p.expectedAt)}`,
+      `DTEND:${icsDate(p.expectedAt + 15 * 60000)}`,
+      `SUMMARY:${icsEsc('[예측 확인] ' + predLine(p))}`,
+      `DESCRIPTION:${icsEsc(`${predLine(p)} 예측 확인 시간입니다.\n${fmtDate(p.createdAt)}에 등록한 사진과 지금 차트를 비교해 점수를 매기세요.`)}`,
+      'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsEsc('예측 확인: ' + predLine(p))}`, 'TRIGGER:PT0M', 'END:VALARM',
+      'END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  return lines.map(icsFold).join('\r\n') + '\r\n';
+}
+// 휴대폰 캘린더(.ics) 파일 - 파일 버전 전용 (링크 페이지는 .ics 저장 불가)
+async function addToCalendar(ids) {
+  const ps = (await Promise.all(ids.map(id => getOne('predictions', id)))).filter(Boolean);
+  if (!ps.length) return;
+  closeModal();
+  downloadBlob(new Blob([buildICS(ps)], { type: 'text/calendar;charset=utf-8' }), `예측확인_${stamp()}.ics`);
+  await markCalendar(ps.map(p => p.id));
+  toast('캘린더 파일을 만들었어요. 파일을 열어 캘린더에 추가하세요');
+}
+async function markCalendar(ids) {
+  const ps = (await Promise.all(ids.map(id => getOne('predictions', id)))).filter(Boolean);
+  await writeMany(ps.map(p => ({ store: 'predictions', type: 'put', value: { ...p, calendarAdded: true } })));
+  if (view === 'detail' && !overlayOpen()) render();
+}
+// 구글 캘린더 일정 추가 링크 (두 버전 모두 사용 가능)
+function gcalUrl(p) {
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+    + '&text=' + encodeURIComponent('[예측 확인] ' + predLine(p))
+    + '&dates=' + icsDate(p.expectedAt) + '/' + icsDate(p.expectedAt + 15 * 60000)
+    + '&details=' + encodeURIComponent(`${fmtDate(p.createdAt)}에 등록한 예측 사진과 지금 차트를 비교해 점수를 매기세요.`);
+}
+const NEAR_MS = 12 * 3600000;   // 12시간 이내 예측은 휴대폰 알람 안내
+const hm = ms => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+async function calendarChoice(ids, reason, nearOnlyShown) {
+  const all = (await Promise.all(ids.map(id => getOne('predictions', id)))).filter(Boolean).sort((a, b) => a.expectedAt - b.expectedAt);
+  if (!all.length) return;
+  const now = Date.now();
+  const near = nearOnlyShown ? [] : all.filter(p => p.expectedAt - now <= NEAR_MS);
+  const ps = nearOnlyShown ? all : all.filter(p => p.expectedAt - now > NEAR_MS);
+  if (near.length) {
+    const rows = near.map(p => `<div class="calrow"><div class="t"><b>${esc(symName(p.symbolId))}</b> ${esc(p.timeframe)}<br><span class="sub">${fmtDate(p.expectedAt)} · ${relTime(p.expectedAt)}</span></div><span class="alarmbig">${hm(p.expectedAt)}</span></div>`).join('');
+    showModal(`<h3>휴대폰 알람 맞추기</h3>
+      <div class="hint" style="font-size:14px">12시간 안에 확인할 예측이에요. 시계 앱을 열고 아래 시각으로 알람을 맞추세요.</div>
+      ${rows}
+      <div class="hint">갤럭시에서는 웹 페이지가 시계 앱에 알람을 직접 넣을 수 없어요. 이 앱이 열려 있으면 그 시각에 앱 알람도 울려요.</div>
+      <div class="btnrow">${ps.length ? `<button class="btn primary" onclick="App.calNext(${esc(JSON.stringify(ps.map(p => p.id)))},'${reason}')">다음: 캘린더 ${ps.length}개</button>` : ''}<button class="btn ${ps.length ? '' : 'primary'}" onclick="App.closeModal()">${ps.length ? '닫기' : '확인'}</button></div>`);
+    return;
+  }
+  if (!ps.length) return;
+  const msg = reason === 'timeChanged'
+    ? '예정 시간이 바뀌었어요. 캘린더 일정을 다시 추가하세요.<br>기존 일정은 캘린더에서 직접 지워주세요.'
+    : '앱을 닫아도 예정 시간에 알림을 받으려면 캘린더에 추가하세요.';
+  const ics = IN_LINK ? '' : `<button class="btn primary wide" style="margin-top:12px" onclick="App.addToCalendar(${esc(JSON.stringify(ps.map(p => p.id)))})">휴대폰 캘린더에 ${ps.length > 1 ? ps.length + '개 한 번에 ' : ''}추가 (.ics)</button>
+    <div class="hint">받은 파일을 열면 휴대폰 캘린더에 일정이 들어가요.</div>`;
+  const rows = ps.map(p => `<div class="calrow"><div class="t"><b>${esc(symName(p.symbolId))}</b> ${esc(p.timeframe)}<br><span class="sub">${fmtDate(p.expectedAt)}</span></div>
+    <a class="btn small" href="${esc(gcalUrl(p))}" target="_blank" rel="noopener" onclick="App.markCal('${p.id}')">구글 캘린더</a></div>`).join('');
+  showModal(`<h3>캘린더에 추가할까요?</h3><div class="hint" style="font-size:14px">${msg}</div>${ics}
+    <div class="label" style="margin-top:14px"><span>구글 캘린더에 하나씩 추가</span></div>${rows}
+    <div class="hint">구글 캘린더 알림 시각은 구글 캘린더의 기본 알림 설정을 따라요.</div>
+    <div class="btnrow"><button class="btn" onclick="App.closeModal()">닫기</button></div>`);
+}
+async function afterSaveCalendar(ids, reason) {
+  // 12시간 이내 예측은 설정과 상관없이 휴대폰 알람 안내를 먼저 보여줌
+  const ps = (await Promise.all(ids.map(id => getOne('predictions', id)))).filter(Boolean);
+  const nearIds = ps.filter(p => p.expectedAt - Date.now() <= NEAR_MS).map(p => p.id);
+  const farIds = ps.filter(p => p.expectedAt - Date.now() > NEAR_MS).map(p => p.id);
+  if (S.calendarMode === 'never' || !farIds.length) { if (nearIds.length) calendarChoice(nearIds, reason); return; }
+  if (S.calendarMode === 'always' && !IN_LINK) {   // 링크 버전은 자동 저장이 안 되어 창으로 물음
+    await addToCalendar(farIds);
+    if (nearIds.length) calendarChoice(nearIds, reason);
+    return;
+  }
+  calendarChoice(ids, reason);
+}
+
+/* =========================== 알람 B: 앱 내부 알람 =========================== */
+let audioCtx = null;
+function unlockAudio() {
+  try {
+    if (!audioCtx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) audioCtx = new AC(); }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  } catch (e) {}
+}
+document.addEventListener('pointerdown', unlockAudio, { passive: true });   // 휴대폰은 한 번 터치해야 소리가 남
+function beep() {
+  if (!S.alarmSound || !audioCtx) return;
+  try {
+    const t0 = audioCtx.currentTime;
+    [0, 0.35, 0.7].forEach(d => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, t0 + d);
+      g.gain.exponentialRampToValueAtTime(0.4, t0 + d + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + 0.28);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0 + d); o.stop(t0 + d + 0.3);
+    });
+  } catch (e) {}
+}
+function vibrate() { if (S.alarmVibrate && navigator.vibrate) { try { navigator.vibrate([300, 150, 300, 150, 300]); } catch (e) {} } }
+function systemNotify(p) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    const n = new Notification('예측 확인 시간', { body: predLine(p), tag: p.id });
+    n.onclick = () => { window.focus(); App.alarmGo(p.id); n.close(); };
+  } catch (e) {}   // 일부 휴대폰 브라우저는 페이지에서 직접 알림을 띄울 수 없음
+}
+function fireAlarm(preds) {
+  beep(); vibrate();
+  preds.forEach(systemNotify);
+  const rows = preds.map(p => `<div class="alarmrow"><div class="t"><b>${esc(symName(p.symbolId))}</b> <span class="badge">${esc(p.timeframe)}</span><br><span class="sub">${fmtDate(p.expectedAt)} 예정</span></div><button class="btn small primary" onclick="App.alarmGo('${p.id}')">확인하기</button></div>`).join('');
+  showModal(`<h3>⏰ 예측 확인 시간 (${preds.length})</h3>${rows}<div class="btnrow"><button class="btn" onclick="App.closeModal()">나중에</button></div>`);
+}
+async function tick() {
+  const changed = await refreshStatuses();
+  if ((view === 'home' || view === 'today') && !overlayOpen()) await render();
+  else if (changed.length && view === 'detail') await render();
+  if (changed.length && !document.hidden) fireAlarm(changed);
+  else if (!document.hidden) nightRemind();
+}
+
+/* =========================== 검증 =========================== */
+async function startReview(id) {
+  const p = await getOne('predictions', id);
+  if (!p) return false;
+  const r = await getOne('reviews', id);
+  const analysis = await loadPhotos(p.photoIds);
+  const photos = r ? (await loadPhotos(r.resultPhotoIds)).map(ph => ({ id: ph.id, blob: ph.blob, url: photoUrl(ph), isNew: false })) : [];
+  rv = { pred: p, existing: r || null, analysis, photos, removedPhotoIds: [],
+    score: r && r.score ? r.score : 0, reason: r ? (r.reason || '') : '', dirty: false };
+  return true;
+}
+function cleanupReview() {
+  if (!rv) return;
+  rv.photos.forEach(ph => { if (ph.isNew) URL.revokeObjectURL(ph.url); });
+  rv = null;
+}
+function renderReview() {
+  if (!rv) { $('view').innerHTML = ''; return; }
+  const p = rv.pred;
+  const now = rv.photos.map((ph, j) => `<div class="one"><img src="${ph.url}" onclick="App.viewImg('${ph.url}')" alt=""><button class="x" onclick="App.removeResultPhoto(${j})">✕</button></div>`).join('');
+  const addBox = rv.photos.length
+    ? `<div class="ph addph bar" style="margin-top:8px"><span>＋</span>사진 더 추가<input type="file" accept="image/*" multiple onchange="App.addResultPhotos(this)"></div>`
+    : `<div class="ph addph big" style="display:flex"><span>📷</span>지금 차트 사진 첨부<input type="file" accept="image/*" multiple onchange="App.addResultPhotos(this)"></div>`;
+  const scoreBtns = [1, 2, 3, 4, 5].map(n => `<button class="opt score s${n} ${rv.score === n ? 'on' : ''}" onclick="App.setScore(${n})">${n}</button>`).join('');
+  $('view').innerHTML = `
+    <section class="card">
+      <div class="prow"><span class="sym">${esc(symName(p.symbolId))}</span><span class="badge">${esc(p.timeframe)}</span><span class="right sub">${fmtDate(p.createdAt)} 등록 → ${fmtDate(p.expectedAt)}</span></div>
+    </section>
+    <section class="card">
+      <div class="label"><span><span class="cmp-tag">예측</span> 등록할 때 사진</span><span>${rv.analysis.length}장</span></div>
+      ${rv.analysis.length ? bigPhotos(rv.analysis) : '<div class="sub">사진이 없어요.</div>'}
+      ${p.memo ? `<div class="label"><span>등록할 때 분석 글</span></div><div class="memo">${esc(p.memo)}</div>` : ''}
+    </section>
+    <section class="card">
+      <div class="label"><span><span class="cmp-tag" style="color:var(--accent)">지금</span> 지금 차트 사진</span><span>${rv.photos.length ? rv.photos.length + '장' : ''}</span></div>
+      <div class="bigph">${now}</div>
+      ${addBox}
+      ${rv.analysis.length && rv.photos.length ? `<button class="btn wide" style="margin-top:10px" onclick="App.compareReview()">겹쳐서 비교</button>` : ''}
+    </section>
+    <section class="card">
+      <div class="label"><span>예측 점수</span></div>
+      <div class="grid5">${scoreBtns}</div>
+      <div class="scorelbl">${rv.score ? `<b>${rv.score}점</b> · ${SCORES[rv.score]}` : '<span class="sub">1 완전히 틀림 ~ 5 완전히 맞음</span>'}</div>
+      <div class="label"><span>이유 분석</span></div>
+      <textarea placeholder="왜 맞았는지, 왜 틀렸는지 적어주세요" oninput="App.inReason(this.value)">${esc(rv.reason)}</textarea>
+    </section>
+    <div class="savebar"><button class="btn primary wide" onclick="App.saveReview()">${rv.existing ? '검증 수정 저장' : '검증 저장'}</button></div>`;
+}
+async function saveReview() {
+  const errors = [];
+  if (!rv.photos.length) errors.push('지금 차트 사진을 1장 이상 첨부하세요.');
+  if (!rv.score) errors.push('예측 점수를 골라주세요.');
+  if (errors.length) { uiAlert(errors.join('\n')); return; }
+  const now = Date.now(), ops = [];
+  const p = await getOne('predictions', rv.pred.id);
+  if (!p) { uiAlert('예측을 찾을 수 없어요.'); return; }
+  const resultPhotoIds = [];
+  rv.photos.forEach(ph => {
+    if (ph.isNew) {
+      const id = uid(); resultPhotoIds.push(id);
+      ops.push({ store: 'photos', type: 'put', value: { id, blob: ph.blob, predictionId: p.id, kind: 'result', createdAt: now } });
+    } else resultPhotoIds.push(ph.id);
+  });
+  rv.removedPhotoIds.forEach(id => ops.push({ store: 'photos', type: 'delete', key: id }));
+  ops.push({ store: 'reviews', type: 'put', value: {
+    ...(rv.existing || {}),
+    predictionId: p.id, score: rv.score, resultPhotoIds, reason: rv.reason.trim(),
+    reviewedAt: rv.existing && rv.existing.reviewedAt ? rv.existing.reviewedAt : now, updatedAt: now
+  } });
+  ops.push({ store: 'predictions', type: 'put', value: { ...p, status: 'done', updatedAt: now } });
+  try { await writeMany(ops); }
+  catch (e) { uiAlert('저장에 실패했어요.\n' + (e && e.message ? e.message : '')); return; }
+  toast(`검증 저장 · ${rv.score}점`);
+  leaveSub();
+}
+
+/* =========================== 겹쳐서 비교 =========================== */
+// 자동 맞춤: 두 스크린샷에서 '열마다 캔들이 있는 높이'를 뽑아 1차원 흐름으로 만들고,
+// 가로 배율·가로 이동을 바꿔 가며 두 흐름이 가장 비슷한 자리를 찾는다.
+// 세로는 그 자리에서 직선 맞춤(배율·이동)으로 구한다. 시간축 글자는 읽지 않는다.
+const ALIGN_W = 480;
+function loadImgEl(url) {
+  return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('사진을 읽지 못함')); im.src = url; });
+}
+async function chartSignal(url) {
+  const im = await loadImgEl(url);
+  const nw = im.naturalWidth, nh = im.naturalHeight, k = ALIGN_W / nw, w = ALIGN_W, h = Math.max(8, Math.round(nh * k));
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0, w, h);
+  const d = g.getImageData(0, 0, w, h).data;
+  // 배경색 = 가장 많은 색
+  const hist = new Map();
+  for (let i = 0; i < d.length; i += 16) { const key = (d[i] >> 4) << 8 | (d[i + 1] >> 4) << 4 | (d[i + 2] >> 4); hist.set(key, (hist.get(key) || 0) + 1); }
+  let bk = 0, bc = -1; hist.forEach((c, key) => { if (c > bc) { bc = c; bk = key; } });
+  const R = ((bk >> 8) & 15) * 16 + 8, G = ((bk >> 4) & 15) * 16 + 8, B = (bk & 15) * 16 + 8;
+  const on = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4;
+    if (Math.abs(d[i] - R) + Math.abs(d[i + 1] - G) + Math.abs(d[i + 2] - B) > 90) on[y * w + x] = 1;
+  }
+  // 가로로 길게 이어진 줄(격자·구분선·메뉴 띠)은 빼기
+  const rowFull = new Uint8Array(h);
+  for (let y = 0; y < h; y++) { let c = 0; for (let x = 0; x < w; x++) c += on[y * w + x]; rowFull[y] = c > w * 0.5 ? 1 : 0; }
+  // 위 6%(상태줄·메뉴), 아래 8%(시간축), 오른쪽 14%(가격축)는 빼기
+  const y0 = Math.round(h * 0.06), y1 = Math.round(h * 0.92), x1 = Math.round(w * 0.86);
+  const mid = new Float32Array(w).fill(NaN), top = new Float32Array(w).fill(NaN), bot = new Float32Array(w).fill(NaN);
+  for (let x = 0; x < x1; x++) {
+    const ys = [];
+    for (let y = y0; y < y1; y++) if (!rowFull[y] && on[y * w + x]) ys.push(y);
+    if (ys.length >= 2) { mid[x] = (ys[0] + ys[ys.length - 1] + 2 * ys[ys.length >> 1]) / 4; top[x] = ys[0]; bot[x] = ys[ys.length - 1]; }
+  }
+  // 캔들 사이 빈 열 때문에 흔들리지 않게 앞뒤 3열 평균으로 부드럽게
+  const sm = new Float32Array(w).fill(NaN);
+  for (let x = 0; x < w; x++) {
+    let c = 0, t = 0;
+    for (let j = Math.max(0, x - 3); j <= Math.min(w - 1, x + 3); j++) if (mid[j] === mid[j]) { c++; t += mid[j]; }
+    if (c >= 3) sm[x] = t / c;
+  }
+  // 잔물결: 앞뒤 8열 평균을 뺀 값 (전체 추세가 아니라 캔들 하나하나의 오르내림으로 자리를 찾음)
+  const hp = new Float32Array(w).fill(NaN);
+  for (let x = 0; x < w; x++) {
+    if (mid[x] !== mid[x]) continue;
+    let c = 0, t = 0;
+    for (let j = Math.max(0, x - 8); j <= Math.min(w - 1, x + 8); j++) if (mid[j] === mid[j]) { c++; t += mid[j]; }
+    if (c >= 6) hp[x] = mid[x] - t / c;
+  }
+  return { w, h, k, nw, nh, mid: sm, hp, top, bot };
+}
+// 두 열 묶음의 상관계수 (sx·tx로 A 열을 B 열에 대응)
+function corrAt(xa, va, Bv, Bw, sx, tx, minN) {
+  let n = 0, s1 = 0, s2 = 0, s11 = 0, s22 = 0, s12 = 0;
+  for (let i = 0; i < xa.length; i++) {
+    const xb = Math.round(sx * xa[i] + tx);
+    if (xb < 0 || xb >= Bw) continue;
+    const yb = Bv[xb];
+    if (yb !== yb) continue;
+    const yA = va[i];
+    n++; s1 += yA; s2 += yb; s11 += yA * yA; s22 += yb * yb; s12 += yA * yb;
+  }
+  if (n < minN) return null;
+  const cov = s12 - s1 * s2 / n, vA = s11 - s1 * s1 / n, vB = s22 - s2 * s2 / n;
+  if (vA <= 1e-6 || vB <= 1e-6) return null;
+  return { r: cov / Math.sqrt(vA * vB), n, m1: s1 / n, m2: s2 / n, vA, vB };
+}
+async function alignImages(urlA, urlB) {
+  const A = await chartSignal(urlA), Bs = await chartSignal(urlB);
+  // 예측 사진은 오른쪽(미래 쪽)에 손으로 그린 선이 있을 수 있어 왼쪽 70%만 씀
+  const lim = Math.round(A.w * 0.7), xh = [], vh = [], xl = [], vl = [];
+  for (let x = 0; x < lim; x++) {
+    if (A.hp[x] === A.hp[x]) { xh.push(x); vh.push(A.hp[x]); }
+    if (A.mid[x] === A.mid[x]) { xl.push(x); vl.push(A.mid[x]); }
+  }
+  if (xh.length < 20) return null;
+  const minN = Math.max(20, xh.length * 0.35);
+  let best = null;
+  const tryOne = (sx, tx) => {
+    const c = corrAt(xh, vh, Bs.hp, Bs.w, sx, tx, minN);
+    if (!c || c.r <= 0) return;
+    // 겹친 구간이 넓을수록, 배율이 1에 가까울수록 우대 (같은 휴대폰·같은 확대로 찍는 경우가 대부분)
+    const score = c.r - 0.15 * (1 - c.n / xh.length) - 0.08 * Math.abs(Math.log(sx));
+    if (!best || score > best.score) best = { score, r: c.r, sx, tx };
+  };
+  for (let ls = -0.7; ls <= 0.7001; ls += 0.01) {
+    const sx = Math.exp(ls);
+    for (let tx = Math.floor(-sx * lim); tx <= Bs.w; tx++) tryOne(sx, tx);
+    if (Math.round((ls + 0.7) * 100) % 20 === 19) await new Promise(r => setTimeout(r, 0));   // 화면이 멈추지 않게
+  }
+  if (!best) return null;
+  // 가까운 곳 다듬기: 잔물결 + 높이 흐름을 같이 보고 더 잘 맞는 자리로
+  const c0 = { ...best };
+  let fine = null;
+  for (let sx = c0.sx * 0.94; sx <= c0.sx * 1.0601; sx += c0.sx * 0.0025)
+    for (let tx = c0.tx - 12; tx <= c0.tx + 12; tx += 0.25) {
+      const h1 = corrAt(xh, vh, Bs.hp, Bs.w, sx, tx, minN), l1 = corrAt(xl, vl, Bs.mid, Bs.w, sx, tx, minN);
+      if (!h1 || !l1) continue;
+      const sc = h1.r + l1.r - 0.15 * (1 - h1.n / xh.length);
+      if (!fine || sc > fine.sc) fine = { sc, sx, tx, r: h1.r };
+    }
+  if (fine) { best.sx = fine.sx; best.tx = fine.tx; best.r = fine.r; }
+  // 세로: 찾은 가로 자리에서 캔들 위끝·아래끝끼리 배율·이동 맞춤 (어긋난 점은 한 번 걸러냄)
+  const pts = [];
+  for (let x = 0; x < lim; x++) {
+    const xb = Math.round(best.sx * x + best.tx);
+    if (xb < 0 || xb >= Bs.w) continue;
+    if (A.top[x] === A.top[x] && Bs.top[xb] === Bs.top[xb]) pts.push([A.top[x], Bs.top[xb]]);
+    if (A.bot[x] === A.bot[x] && Bs.bot[xb] === Bs.bot[xb]) pts.push([A.bot[x], Bs.bot[xb]]);
+  }
+  const fitLine = list => {
+    const n = list.length; if (n < 10) return null;
+    let s1 = 0, s2 = 0; list.forEach(([u, v]) => { s1 += u; s2 += v; });
+    const m1 = s1 / n, m2 = s2 / n; let vA = 0, vB = 0, cv = 0;
+    list.forEach(([u, v]) => { vA += (u - m1) ** 2; vB += (v - m2) ** 2; cv += (u - m1) * (v - m2); });
+    if (vA <= 0 || cv <= 0) return null;
+    const a = Math.sqrt(vB / vA); return { a, b: m2 - a * m1 };
+  };
+  let ln = fitLine(pts);
+  if (!ln) return null;
+  const res = pts.map(([u, v]) => Math.abs(v - (ln.a * u + ln.b))).sort((p, q) => p - q);
+  const cut = Math.max(2, res[Math.floor(res.length * 0.5)] * 3);
+  ln = fitLine(pts.filter(([u, v]) => Math.abs(v - (ln.a * u + ln.b)) <= cut)) || ln;
+  const a = ln.a, b = ln.b;
+  const sy = a * A.k / Bs.k;
+  if (!(sy > 0.2 && sy < 5)) return null;
+  // 원본 픽셀 기준: 예측 사진 (u,v) → 지금 사진 (sx·u + tx, sy·v + ty)
+  // 맞춤 확신도: 맞춘 자리에서 캔들 위끝·아래끝이 맞춘 선 가까이(사진 높이 1.5% 안)에 있는 비율
+  const tol = Bs.h * 0.015;
+  const good = pts.filter(([u, v]) => Math.abs(v - (a * u + b)) <= tol).length / pts.length;
+  return { sx: best.sx * A.k / Bs.k, tx: best.tx / Bs.k, sy, ty: b / Bs.k, r: best.r, good };
+}
+
+let cmp = null;   // { a, b: 사진 url[], ai, bi, mode: 'wipe'|'fade', v, fit, status, adjust, cache }
+function openCompare(a, b) {
+  if (!a.length || !b.length) { uiAlert('예측 사진과 지금 사진이 모두 있어야 비교할 수 있어요.'); return; }
+  cmp = { a, b, ai: 0, bi: 0, mode: 'wipe', v: 50, fit: null, status: 'aligning', adjust: false, cache: {} };
+  renderCompare();
+  runAlign();
+}
+async function runAlign(force) {
+  if (!cmp) return;
+  const key = cmp.ai + '|' + cmp.bi, mine = cmp;
+  if (!force && cmp.cache[key]) { cmp.fit = cmp.cache[key].fit; cmp.status = cmp.cache[key].status; renderCompare(); return; }
+  cmp.status = 'aligning'; cmp.fit = null; renderCompare();
+  let fit = null;
+  try { fit = await alignImages(cmp.a[cmp.ai], cmp.b[cmp.bi]); } catch (e) { fit = null; }
+  if (cmp !== mine || key !== cmp.ai + '|' + cmp.bi) return;   // 그 사이 닫았거나 사진을 바꿈
+  cmp.fit = fit;
+  // 맞춤 확신도(good): 테스트에서 맞는 사진 0.77~0.96, 엉뚱한 사진 0.17
+  cmp.status = !fit ? 'fail' : fit.good >= 0.6 ? 'ok' : fit.good >= 0.4 ? 'weak' : 'fail';
+  if (cmp.status === 'fail') cmp.fit = null;
+  cmp.cache[key] = { fit: cmp.fit, status: cmp.status };
+  renderCompare();
+}
+function cmpTopStyle() { return cmp.mode === 'wipe' ? `clip-path:inset(0 0 0 ${cmp.v}%)` : `opacity:${cmp.v / 100}`; }
+const CMP_STATUS = {
+  aligning: '같은 캔들 위치를 찾는 중…',
+  ok: '같은 캔들끼리 자동으로 맞췄어요',
+  weak: '자동으로 맞췄지만 조금 어긋날 수 있어요. 어긋나면 직접 맞추기',
+  fail: '자동으로 맞추지 못했어요. 직접 맞추기로 위치를 맞춰 주세요',
+  manual: '직접 맞춘 위치예요'
+};
+function renderCompare() {
+  if (!cmp) return;
+  const c = cmp;
+  const pick = (list, cur, key, label) => list.length > 1
+    ? `<div class="cmp-pick"><span>${label}</span><div class="hscroll">${list.map((_, i) => `<button class="chip ${cur === i ? 'on' : ''}" onclick="App.cmpPick('${key}',${i})">${i + 1}</button>`).join('')}</div></div>` : '';
+  const lsx = c.fit ? Math.round(Math.log(c.fit.sx) * 100) : 0, lsy = c.fit ? Math.round(Math.log(c.fit.sy) * 100) : 0;
+  const ctl = c.adjust
+    ? `<div class="sub">사진을 끌어 위치를 맞추고, 막대로 크기를 맞추세요.</div>
+       <label class="cmp-pick"><span style="width:56px">가로 크기</span><input type="range" id="cmpSx" min="-120" max="120" value="${lsx}" oninput="App.cmpScale('sx',this.value)"></label>
+       <label class="cmp-pick"><span style="width:56px">세로 크기</span><input type="range" id="cmpSy" min="-160" max="160" value="${lsy}" oninput="App.cmpScale('sy',this.value)"></label>
+       <div class="btnrow" style="margin-top:0"><button class="btn small" onclick="App.cmpAuto()">자동 맞춤 다시</button><button class="btn small primary" onclick="App.cmpAdjust(false)">완료</button></div>`
+    : `<input type="range" id="cmpRange" min="0" max="100" value="${c.v}" oninput="App.cmpVal(this.value)" aria-label="${c.mode === 'wipe' ? '경계선 위치' : '지금 사진 투명도'}">
+       ${pick(c.a, c.ai, 'ai', '예측 사진')}${pick(c.b, c.bi, 'bi', '지금 사진')}
+       <div class="cmp-pick"><span style="flex:1;color:${c.status === 'ok' || c.status === 'manual' ? 'var(--text)' : 'var(--accent)'}">${CMP_STATUS[c.status]}</span>${c.status === 'aligning' ? '' : '<button class="chip" onclick="App.cmpAdjust(true)">직접 맞추기</button>'}</div>`;
+  $('modalRoot').innerHTML = `<div class="cmp">
+    <div class="cmp-bar">
+      <div class="grid2" style="flex:1"><button class="opt ${c.mode === 'wipe' ? 'on' : ''}" onclick="App.cmpMode('wipe')">밀어 보기</button><button class="opt ${c.mode === 'fade' ? 'on' : ''}" onclick="App.cmpMode('fade')">겹쳐 보기</button></div>
+      <button class="cmp-x" onclick="App.closeCompare()" aria-label="닫기">✕</button>
+    </div>
+    <div class="cmp-stage" id="cmpStage">
+      <div class="cmp-lay"><img class="cmp-img" id="cmpA" src="${c.a[c.ai]}" alt="예측 사진"></div>
+      <div class="cmp-lay" id="cmpTop" style="${cmpTopStyle()}"><img class="cmp-img" id="cmpB" src="${c.b[c.bi]}" alt="지금 사진"></div>
+      <div class="cmp-line" id="cmpLine" style="left:${c.v}%;${c.mode === 'wipe' ? '' : 'display:none'}"></div>
+      <span class="cmp-lab l">예측</span><span class="cmp-lab r" id="cmpLabR">${c.mode === 'wipe' ? '지금' : `지금 ${c.v}%`}</span>
+    </div>
+    <div class="cmp-ctl">${ctl}</div>
+  </div>`;
+  const st = $('cmpStage');
+  ['cmpA', 'cmpB'].forEach(id => { const im = $(id); if (!im.complete) im.onload = cmpPlace; });
+  cmpPlace();
+  // 사진 위를 끌면: 평소엔 경계선·투명도 조절, 직접 맞추기에선 예측 사진 이동
+  let last = null;
+  const move = e => { const r = st.getBoundingClientRect(); App.cmpVal(Math.round(Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * 100)); };
+  st.addEventListener('pointerdown', e => {
+    try { st.setPointerCapture(e.pointerId); } catch (x) {}
+    if (cmp.adjust) last = { x: e.clientX, y: e.clientY }; else move(e);
+  });
+  st.addEventListener('pointermove', e => {
+    if (!(e.buttons || e.pointerType === 'touch')) return;
+    if (cmp.adjust && last && cmp.fit) {
+      const k = cmpScaleK();
+      cmp.fit.tx += (e.clientX - last.x) / k; cmp.fit.ty += (e.clientY - last.y) / k;
+      last = { x: e.clientX, y: e.clientY }; cmpPlace();
+    } else if (!cmp.adjust) move(e);
+  });
+  st.addEventListener('pointerup', () => { last = null; });
+}
+// 지금 사진이 화면에 그려지는 배율
+function cmpScaleK() {
+  const st = $('cmpStage'), b = $('cmpB');
+  if (!st || !b || !b.naturalWidth) return 1;
+  return Math.min(st.clientWidth / b.naturalWidth, st.clientHeight / b.naturalHeight);
+}
+// 지금 사진은 화면에 맞춰 가운데, 예측 사진은 맞춘 값(fit)대로 지금 사진 위에 배치
+function cmpPlace() {
+  if (!cmp) return;
+  const st = $('cmpStage'), a = $('cmpA'), b = $('cmpB');
+  if (!st || !a || !b || !a.naturalWidth || !b.naturalWidth) return;
+  const W = st.clientWidth, H = st.clientHeight, k = cmpScaleK();
+  const bw = b.naturalWidth * k, bh = b.naturalHeight * k, bx = (W - bw) / 2, by = (H - bh) / 2;
+  Object.assign(b.style, { left: bx + 'px', top: by + 'px', width: bw + 'px', height: bh + 'px' });
+  if (cmp.fit) {
+    const f = cmp.fit;
+    Object.assign(a.style, { left: (bx + f.tx * k) + 'px', top: (by + f.ty * k) + 'px', width: (a.naturalWidth * f.sx * k) + 'px', height: (a.naturalHeight * f.sy * k) + 'px' });
+  } else {
+    const ka = Math.min(W / a.naturalWidth, H / a.naturalHeight);
+    const aw = a.naturalWidth * ka, ah = a.naturalHeight * ka;
+    Object.assign(a.style, { left: (W - aw) / 2 + 'px', top: (H - ah) / 2 + 'px', width: aw + 'px', height: ah + 'px' });
+  }
+}
+window.addEventListener('resize', () => { if (cmp) cmpPlace(); });
+function cmpVal(v) {
+  if (!cmp) return;
+  cmp.v = Math.max(0, Math.min(100, Number(v) || 0));
+  const top = $('cmpTop'), line = $('cmpLine'), range = $('cmpRange'), lab = $('cmpLabR');
+  if (top) top.setAttribute('style', cmpTopStyle());
+  if (line) line.style.left = cmp.v + '%';
+  if (range && Number(range.value) !== cmp.v) range.value = cmp.v;
+  if (lab && cmp.mode === 'fade') lab.textContent = `지금 ${cmp.v}%`;
+}
+// 직접 맞추기를 시작할 때 맞춘 값이 없으면 '두 사진을 같은 크기로 겹친 상태'에서 시작
+function cmpEnsureFit() {
+  if (cmp.fit) return;
+  const a = $('cmpA'), b = $('cmpB');
+  if (!a || !b || !a.naturalWidth || !b.naturalWidth) return;
+  const s = Math.min(b.naturalWidth / a.naturalWidth, b.naturalHeight / a.naturalHeight);
+  cmp.fit = { sx: s, sy: s, tx: (b.naturalWidth - a.naturalWidth * s) / 2, ty: (b.naturalHeight - a.naturalHeight * s) / 2, r: 0 };
+}
+
+/* =========================== 상세 =========================== */
+async function renderDetail() {
+  const p = await getOne('predictions', params.id);
+  if (!p) { $('view').innerHTML = '<div class="empty">예측을 찾을 수 없어요.</div>'; return; }
+  const photos = await loadPhotos(p.photoIds);
+  const r = await getOne('reviews', p.id);
+  const badge = p.status === 'done' && r && r.score ? scoreBadge(r) : `<span class="badge ${p.status === 'due' ? 'st-due' : ''}">${STATUS[p.status]}</span>`;
+  let h = `<section class="card">
+    <div class="prow"><span class="sym">${esc(symName(p.symbolId))}</span><span class="badge">${esc(p.timeframe)}</span>${badge}</div>
+    <dl class="kv" style="margin-top:14px">
+      <dt>등록</dt><dd>${fmtDate(p.createdAt)}</dd>
+      <dt>예정 시간</dt><dd>${fmtDate(p.expectedAt)}${p.status === 'waiting' || p.status === 'due' ? ` <span class="sub">(${relTime(p.expectedAt)})</span>` : ''}</dd>
+      <dt>캘린더</dt><dd>${p.calendarAdded ? '추가함' : '추가 안 함'}</dd>
+    </dl></section>`;
+  if (p.memo) h += `<section class="card"><div class="label"><span>분석 글</span></div><div class="memo">${esc(p.memo)}</div></section>`;
+  if (r && r.score) {
+    const rPhotos = await loadPhotos(r.resultPhotoIds);
+    h += `<section class="card">
+      <div class="label"><span>검증 결과</span><span>${fmtDate(r.reviewedAt)}</span></div>
+      <div style="font-size:16px">${scoreBadge(r)} ${SCORES[r.score]}</div>
+      ${r.reason ? `<div class="label"><span>이유 분석</span></div><div class="memo">${esc(r.reason)}</div>` : ''}
+    </section>`;
+    h += `<section class="card"><div class="label"><span><span class="cmp-tag">예측</span> 등록할 때 사진</span></div>${photos.length ? bigPhotos(photos) : '<div class="sub">사진이 없어요.</div>'}</section>`;
+    h += `<section class="card"><div class="label"><span><span class="cmp-tag" style="color:var(--accent)">결과</span> 검증할 때 사진</span></div>${rPhotos.length ? bigPhotos(rPhotos) : '<div class="sub">사진이 없어요.</div>'}</section>`;
+    if (photos.length && rPhotos.length) h += `<button class="btn wide" style="margin-bottom:10px" onclick="App.compareDetail('${p.id}')">겹쳐서 비교</button>`;
+  } else {
+    h += photos.length
+      ? `<section class="card"><div class="label"><span>예측 사진 ${photos.length}장</span><span>눌러서 크게 보기</span></div>${bigPhotos(photos)}</section>`
+      : `<section class="card"><div class="sub">사진이 없어요.</div></section>`;
+  }
+  if (p.status === 'waiting' || p.status === 'due') {
+    h += `<button class="btn ${p.status === 'due' ? 'primary' : ''} wide" onclick="App.openReview('${p.id}')">${p.status === 'due' ? '검증하기' : '지금 검증하기 (예정 시간 전)'}</button>`;
+    h += `<div class="btnrow"><button class="btn" onclick="App.calendarChoice(['${p.id}'])">캘린더 추가</button><button class="btn" onclick="App.editPrediction('${p.id}')">수정</button><button class="btn danger" onclick="App.cancelPrediction('${p.id}')">취소</button></div>`;
+  } else if (p.status === 'done') {
+    h += `<button class="btn wide" onclick="App.openReview('${p.id}')">검증 수정</button>`;
+  } else if (p.status === 'canceled') {
+    h += `<div class="btnrow"><button class="btn" onclick="App.restorePrediction('${p.id}')">복구</button><button class="btn danger" onclick="App.deletePrediction('${p.id}')">완전 삭제</button></div>`;
+  }
+  $('view').innerHTML = h;
+}
+async function cancelPrediction(id) {
+  const p = await getOne('predictions', id);
+  const calMsg = p.calendarAdded ? '\n캘린더에 추가한 일정은 캘린더에서 직접 지워주세요.' : '';
+  if (!(await uiConfirm('이 예측을 취소할까요?\n취소한 예측은 홈 아래 \'취소된 예측\'에서 복구할 수 있어요.' + calMsg, '예측 취소', true))) return;
+  await putOne('predictions', { ...p, status: 'canceled', canceledAt: Date.now(), updatedAt: Date.now() });
+  toast('예측을 취소했어요'); render();
+}
+async function restorePrediction(id) {
+  const p = await getOne('predictions', id);
+  await putOne('predictions', { ...p, status: p.expectedAt > Date.now() ? 'waiting' : 'due', canceledAt: null, updatedAt: Date.now() });
+  toast('예측을 복구했어요'); render();
+}
+async function deletePrediction(id) {
+  if (!(await uiConfirm('완전히 삭제할까요?\n사진도 함께 지워지고 되돌릴 수 없어요.', '완전 삭제', true))) return;
+  const p = await getOne('predictions', id);
+  const r = await getOne('reviews', id);
+  const ops = [{ store: 'predictions', type: 'delete', key: id }, { store: 'reviews', type: 'delete', key: id }];
+  [...(p.photoIds || []), ...((r && r.resultPhotoIds) || [])].forEach(pid => ops.push({ store: 'photos', type: 'delete', key: pid }));
+  await writeMany(ops);
+  toast('삭제했어요'); leaveSub();
+}
+
+/* =========================== 기록·통계 공통 =========================== */
+let recF = { period: 'all', symbolId: '', timeframe: '', score: 0, limit: REC_PAGE };
+let statPeriod = 'all';
+// 기간 시작 시각 (오늘 0시 / 이번 주 월요일 0시 / 이번 달 1일 0시)
+function periodStart(k) {
+  const d = new Date(); d.setHours(0, 0, 0, 0);
+  if (k === 'today') return d.getTime();
+  if (k === 'week') { d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d.getTime(); }
+  if (k === 'month') { d.setDate(1); return d.getTime(); }
+  return 0;
+}
+// 점수가 있는 검증 완료 예측 목록 (t = 검증 시각)
+async function doneItems() {
+  const ps = await getAll('predictions'), rmap = await reviewMap();
+  return ps.filter(p => p.status === 'done' && rmap[p.id] && rmap[p.id].score)
+    .map(p => ({ p, r: rmap[p.id], t: rmap[p.id].reviewedAt || p.expectedAt }));
+}
+function avgOf(list) { return list.length ? list.reduce((a, x) => a + x.r.score, 0) / list.length : 0; }
+function avgText(list) { return list.length ? avgOf(list).toFixed(1) : '-'; }
+function scoreColor(v) { return `var(--s${Math.min(5, Math.max(1, Math.round(v)))})`; }
+function periodBtns(cur, fn) {
+  return `<div class="grid4">${Object.entries(PERIODS).map(([k, l]) => `<button class="opt ${cur === k ? 'on' : ''}" onclick="${fn}('${k}')">${l}</button>`).join('')}</div>`;
+}
+
+/* =========================== 기록 =========================== */
+function recCard(it, thumbUrl) {
+  const { p, r } = it;
+  const first = (r.reason || '').split('\n')[0];
+  return `<div class="pcard" onclick="App.openDetail('${p.id}')">
+    ${thumbUrl ? `<img class="thumb" src="${thumbUrl}" alt="">` : '<div class="thumb none">사진 없음</div>'}
+    <div class="pinfo">
+      <div class="prow"><span class="sym">${esc(symName(p.symbolId))}</span><span class="badge">${esc(p.timeframe)}</span><span class="right">${scoreBadge(r)}</span></div>
+      <div class="prow sub">${fmtDate(it.t)} 검증</div>
+      ${first ? `<div class="sub reason1" style="margin-top:4px">${esc(first)}</div>` : ''}
+    </div>
+  </div>`;
+}
+async function renderRecords() {
+  const all = await doneItems();
+  const start = periodStart(recF.period);
+  const list = all.filter(it => it.t >= start
+      && (!recF.symbolId || it.p.symbolId === recF.symbolId)
+      && (!recF.timeframe || it.p.timeframe === recF.timeframe)
+      && (!recF.score || it.r.score === recF.score))
+    .sort((a, b) => b.t - a.t);
+  // 필터 버튼은 기록이 있는 종목·시간대만 표시 (선택 중인 값은 항상 표시)
+  const symIds = [...new Set(all.map(it => it.p.symbolId))];
+  if (recF.symbolId && !symIds.includes(recF.symbolId)) symIds.push(recF.symbolId);
+  const symOrder = id => { const s = symMap[id]; return s ? s.order : 9999; };
+  symIds.sort((a, b) => symOrder(a) - symOrder(b));
+  const tfs = ALL_TIMEFRAMES.filter(t => t === recF.timeframe || all.some(it => it.p.timeframe === t));
+  const chip = (on, label, fn) => `<button class="chip ${on ? 'on' : ''}" onclick="${fn}">${esc(label)}</button>`;
+  const active = recF.period !== 'all' || recF.symbolId || recF.timeframe || recF.score;
+  let h = predSeg('records') + `<section class="card">
+    <div class="label"><span>기간</span>${active ? '<button class="btn small" onclick="App.recReset()">필터 초기화</button>' : ''}</div>
+    ${periodBtns(recF.period, 'App.recPeriod')}
+    <div class="label"><span>종목</span></div>
+    <div class="hscroll">${chip(!recF.symbolId, '전체', "App.recSet('symbolId','')")}${symIds.map(id => chip(recF.symbolId === id, symName(id), `App.recSet('symbolId','${id}')`)).join('')}</div>
+    <div class="label"><span>시간대</span></div>
+    <div class="hscroll">${chip(!recF.timeframe, '전체', "App.recSet('timeframe','')")}${tfs.map(t => chip(recF.timeframe === t, t, `App.recSet('timeframe','${t}')`)).join('')}</div>
+    <div class="label"><span>점수</span></div>
+    <div class="grid6"><button class="opt ${!recF.score ? 'on' : ''}" onclick="App.recSet('score',0)">전체</button>${[5, 4, 3, 2, 1].map(n => `<button class="opt score s${n} ${recF.score === n ? 'on' : ''}" style="min-height:44px;font-size:15px" onclick="App.recSet('score',${n})">${n}</button>`).join('')}</div>
+  </section>`;
+  h += `<div class="sumrow"><span><b>${list.length}</b>건</span><span>평균 <b>${avgText(list)}</b>점</span></div>`;
+  if (!all.length) h += `<div class="empty">아직 검증한 예측이 없어요.<br>예정 시간이 되면 지금 차트와 비교해 점수를 매겨 보세요.</div>`;
+  else if (!list.length) h += `<div class="empty">조건에 맞는 기록이 없어요.</div>`;
+  else {
+    const shown = list.slice(0, recF.limit), cards = [];
+    for (const it of shown) {
+      const first = (it.p.photoIds || [])[0];
+      const ph = first ? await getOne('photos', first) : null;
+      cards.push(recCard(it, ph ? photoUrl(ph) : ''));
+    }
+    h += cards.join('');
+    if (list.length > shown.length) h += `<button class="btn wide" onclick="App.recMore()">더 보기 (${list.length - shown.length}건 남음)</button>`;
+  }
+  $('view').innerHTML = h;
+}
+
+/* =========================== 통계 =========================== */
+function groupRows(items, keyOf, labelOf, order, clickFn) {
+  const groups = {};
+  items.forEach(it => { const k = keyOf(it); (groups[k] = groups[k] || []).push(it); });
+  return Object.keys(groups).sort(order).map(k => {
+    const g = groups[k], avg = avgOf(g);
+    return `<div class="brow click" onclick="${clickFn(k)}">
+      <span class="nm">${esc(labelOf(k))}</span>
+      <span class="bar"><i style="width:${(avg / 5 * 100).toFixed(0)}%;background:${scoreColor(avg)}"></i></span>
+      <span class="v"><b>${avg.toFixed(1)}</b>점 · ${g.length}건</span>
+    </div>`;
+  }).join('');
+}
+async function renderStats() {
+  if (statMode === 'train') return renderTrainStats();
+  const all = await doneItems();
+  const ps = await getAll('predictions');
+  const waiting = ps.filter(p => p.status === 'waiting').length, due = ps.filter(p => p.status === 'due').length;
+  const items = all.filter(it => it.t >= periodStart(statPeriod));
+  let h = statSeg() + `<section class="card">${periodBtns(statPeriod, 'App.statPeriod')}</section>`;
+  const good = items.filter(it => it.r.score >= 4).length;
+  h += `<div class="stats3">
+    <div class="stat"><b>${items.length}</b><span class="sub">검증 건수</span></div>
+    <div class="stat"><b style="color:${items.length ? scoreColor(avgOf(items)) : 'inherit'}">${avgText(items)}</b><span class="sub">평균 점수</span></div>
+    <div class="stat"><b>${items.length ? Math.round(good / items.length * 100) + '%' : '-'}</b><span class="sub">4점 이상</span></div>
+  </div>
+  <div class="sub" style="margin:8px 2px 0">대기중 ${waiting}건 · 확인 필요 ${due}건${due ? ' — 오늘 화면에서 검증하세요' : ''}</div>`;
+  if (!items.length) {
+    h += `<div class="empty">${all.length ? '이 기간에 검증한 예측이 없어요.' : '아직 검증한 예측이 없어요.'}</div>`;
+    $('view').innerHTML = h; return;
+  }
+  // 점수 분포
+  const cnt = [5, 4, 3, 2, 1].map(n => ({ n, c: items.filter(it => it.r.score === n).length }));
+  const max = Math.max(...cnt.map(x => x.c), 1);
+  h += `<div class="section-title"><span>점수 분포</span></div><section class="card">${cnt.map(x => `<div class="brow">
+      <span class="nm"><span class="sb s${x.n}">${x.n}점</span></span>
+      <span class="bar"><i style="width:${(x.c / max * 100).toFixed(0)}%;background:var(--s${x.n})"></i></span>
+      <span class="v">${x.c}건 · ${Math.round(x.c / items.length * 100)}%</span>
+    </div>`).join('')}</section>`;
+  // 종목별
+  const symOrder = id => { const s = symMap[id]; return s ? s.order : 9999; };
+  h += `<div class="section-title"><span>종목별 평균 점수</span><span>누르면 기록 보기</span></div><section class="card">${groupRows(items,
+    it => it.p.symbolId, id => symName(id), (a, b) => symOrder(a) - symOrder(b), k => `App.statToRecords('symbolId','${k}')`)}</section>`;
+  // 시간대별
+  const tfIdx = t => { const i = ALL_TIMEFRAMES.indexOf(t); return i < 0 ? 99 : i; };
+  h += `<div class="section-title"><span>시간대별 평균 점수</span><span>누르면 기록 보기</span></div><section class="card">${groupRows(items,
+    it => it.p.timeframe, t => t, (a, b) => tfIdx(a) - tfIdx(b), k => `App.statToRecords('timeframe','${esc(k)}')`)}</section>`;
+  $('view').innerHTML = h;
+}
+
+/* =========================== 용량 관리 =========================== */
+let cleanMonths = 6;
+async function storageInfo() {
+  let usage = null, quota = null;
+  try { if (navigator.storage && navigator.storage.estimate) { const e = await navigator.storage.estimate(); usage = e.usage; quota = e.quota; } } catch (e) {}
+  const photos = await getAll('photos');
+  const res = { usage, quota, nA: 0, nR: 0, sA: 0, sR: 0, nB: 0, sB: 0 };
+  photos.forEach(p => {
+    const sz = (p.blob && p.blob.size) || 0;
+    if (p.kind === 'result') { res.nR++; res.sR += sz; }
+    else if (p.kind === 'backtest' || p.kind === 'btexplain') { res.nB++; res.sB += sz; }
+    else { res.nA++; res.sA += sz; }
+  });
+  return res;
+}
+// 정리 대상: 검증한 지 N개월이 지난 검증 완료 예측, 기록한 지 N개월이 지난 백테스트의 사진
+async function cleanupTargets(months) {
+  const cut = Date.now() - months * 30.44 * 86400000;
+  const items = (await doneItems()).filter(it => it.t < cut && ((it.p.photoIds || []).length || (it.r.resultPhotoIds || []).length));
+  const bts = (await getAll('backtests')).filter(b => b.createdAt < cut && ((b.photoIds || []).length || (b.explainPhotoIds || []).length));
+  const ids = [];
+  items.forEach(it => ids.push(...(it.p.photoIds || []), ...(it.r.resultPhotoIds || [])));
+  bts.forEach(b => ids.push(...(b.photoIds || []), ...(b.explainPhotoIds || [])));
+  let bytes = 0;
+  for (const id of ids) { const ph = await getOne('photos', id); if (ph && ph.blob) bytes += ph.blob.size || 0; }
+  return { items, bts, ids, bytes };
+}
+async function runCleanup() {
+  const t = await cleanupTargets(cleanMonths);
+  if (!t.ids.length) { toast('지울 사진이 없어요'); return; }
+  const ok = await uiConfirm(`${cleanMonths >= 12 ? '1년' : cleanMonths + '개월'}보다 오래된 검증 완료 예측 ${t.items.length}건, 백테스트 ${t.bts.length}개의 사진 ${t.ids.length}장(${mb(t.bytes)})을 지울까요?\n\n점수·이유·종목·시간대·결과는 남아서 통계에 그대로 반영돼요.\n지운 사진은 되돌릴 수 없으니 먼저 전체 백업을 권해요.`, '사진 지우기', true);
+  if (!ok) return;
+  const now = Date.now(), ops = [];
+  t.ids.forEach(id => ops.push({ store: 'photos', type: 'delete', key: id }));
+  t.items.forEach(it => {
+    ops.push({ store: 'predictions', type: 'put', value: { ...it.p, photoIds: [], photosCleanedAt: now } });
+    ops.push({ store: 'reviews', type: 'put', value: { ...it.r, resultPhotoIds: [] } });
+  });
+  t.bts.forEach(b => ops.push({ store: 'backtests', type: 'put', value: { ...b, photoIds: [], explainPhotoIds: [], photosCleanedAt: now } }));
+  try { await writeMany(ops); } catch (e) { uiAlert('정리하지 못했어요.\n' + (e && e.message ? e.message : '')); return; }
+  toast(`사진 ${t.ids.length}장을 지웠어요`); render();
+}
+async function deleteCanceled() {
+  const ps = (await getAll('predictions')).filter(p => p.status === 'canceled');
+  if (!ps.length) { toast('취소된 예측이 없어요'); return; }
+  if (!(await uiConfirm(`취소된 예측 ${ps.length}건을 사진까지 모두 지울까요?\n되돌릴 수 없어요.`, '모두 삭제', true))) return;
+  const ops = [];
+  for (const p of ps) {
+    const r = await getOne('reviews', p.id);
+    ops.push({ store: 'predictions', type: 'delete', key: p.id }, { store: 'reviews', type: 'delete', key: p.id });
+    [...(p.photoIds || []), ...((r && r.resultPhotoIds) || [])].forEach(id => ops.push({ store: 'photos', type: 'delete', key: id }));
+  }
+  await writeMany(ops);
+  toast(`취소된 예측 ${ps.length}건을 지웠어요`); render();
+}
+
+/* =========================== 설정 =========================== */
+function notifyStatus() {
+  if (!('Notification' in window)) return '이 브라우저는 지원하지 않아요';
+  return { granted: '허용됨', denied: '거부됨 (브라우저 설정에서 바꿀 수 있어요)', default: '아직 요청 안 함' }[Notification.permission] || Notification.permission;
+}
+async function renderSettings() {
+  const ps = await getAll('predictions');
+  const used = {}; ps.forEach(p => { used[p.symbolId] = (used[p.symbolId] || 0) + 1; });
+  (await getAll('backtests')).forEach(b => { used[b.symbolId] = (used[b.symbolId] || 0) + 1; });
+  const exs = await activeExercises(), nVideos = (await getAll('videos')).length;
+  const info = await storageInfo();
+  const tg = await cleanupTargets(cleanMonths);
+  const nCanceled = ps.filter(p => p.status === 'canceled').length;
+  const pct = info.quota ? Math.round(info.usage / info.quota * 100) : null;
+  const symRows = symbols.map((s, i) => `<div class="symrow">
+      <div class="nm"><b>${esc(s.name)}</b><span class="sub">${esc(s.category || '')}${used[s.id] ? ` · 기록 ${used[s.id]}건` : ''}</span></div>
+      <button class="iconbtn" ${i === 0 ? 'disabled' : ''} onclick="App.moveSymbol(${i},-1)">▲</button>
+      <button class="iconbtn" ${i === symbols.length - 1 ? 'disabled' : ''} onclick="App.moveSymbol(${i},1)">▼</button>
+      <button class="iconbtn" onclick="App.editSymbol('${s.id}')">수정</button>
+    </div>`).join('');
+  const onoff = key => `<div class="grid2"><button class="opt ${S[key] ? 'on' : ''}" onclick="App.setS('${key}',true)">켜기</button><button class="opt ${!S[key] ? 'on' : ''}" onclick="App.setS('${key}',false)">끄기</button></div>`;
+  const canAsk = 'Notification' in window && Notification.permission === 'default';
+  $('view').innerHTML = `
+    <div class="section-title"><span>종목 관리</span><button class="btn small primary" onclick="App.editSymbol('')">＋ 종목 추가</button></div>
+    <section class="card">${symRows || '<div class="sub">종목이 없어요.</div>'}<div class="hint">새 예측 화면의 종목 버튼 옆 입력칸에서도 바로 추가할 수 있어요.</div></section>
+    <div class="section-title"><span>알람</span></div>
+    <section class="card">
+      <div class="label"><span>캘린더 추가 (저장할 때)</span></div>
+      <div class="grid3">${Object.entries(CAL_MODES).map(([k, l]) => `<button class="opt ${S.calendarMode === k ? 'on' : ''}" onclick="App.setS('calendarMode','${k}')">${l}</button>`).join('')}</div>
+      <div class="hint">앱을 닫아도 알림을 받으려면 캘린더 추가가 필요해요.${IN_LINK ? ' 링크 버전에서는 저장할 때마다 구글 캘린더 추가 창이 떠요.' : ''}</div>
+      <div class="label"><span>앱 알람 소리</span></div>${onoff('alarmSound')}
+      <div class="label"><span>앱 알람 진동 (안드로이드)</span></div>${onoff('alarmVibrate')}
+      <div class="label"><span>시스템 알림</span><span>${notifyStatus()}</span></div>
+      ${canAsk ? `<button class="btn small wide" onclick="App.requestNotify()">알림 권한 요청</button>` : ''}
+      <div class="btnrow"><button class="btn" onclick="App.testAlarm()">알람 테스트</button></div>
+      <div class="hint">앱 알람은 이 화면이 열려 있을 때만 울려요. 휴대폰이 잠기거나 다른 앱을 쓰면 울리지 않을 수 있어요.</div>
+    </section>
+    <div class="section-title"><span>필수 분석 종목 (매일)</span></div>
+    <section class="card"><div class="chips">${symbols.map(s => `<button class="chip ${(S.mandatorySymbolIds || []).includes(s.id) ? 'on' : ''}" onclick="App.toggleMand('${s.id}')">${esc(s.name)}</button>`).join('')}</div>
+      <div class="hint">켜진 종목은 오늘 화면에 체크 카드로 나오고, 모두 분석한 날이 이어지면 연속 달성일이 늘어요.</div></section>
+    <div class="section-title"><span>점수 기준</span><button class="btn small" onclick="App.resetScores()">기본값</button></div>
+    <section class="card">${[
+      ['dailyGoal', '하루 목표', S.dailyGoal, 5, '점'],
+      ['mandatory', '필수 종목 분석 (종목당)', S.scores.mandatory, 1, '점'],
+      ['review', '예측 검증 (1건)', S.scores.review, 1, '점'],
+      ['backtest', '백테스트 (1개)', S.scores.backtest, 1, '점'],
+      ['backtestGoal', '백테스트 하루 목표', S.scores.backtestGoal, 1, '개'],
+      ['backtestBonus', '백테스트 목표 달성 보너스', S.scores.backtestBonus, 1, '점'],
+      ['videoFirst', '영상 공부 (첫 영상)', S.scores.videoFirst, 1, '점'],
+      ['videoMore', '영상 공부 (두 번째부터)', S.scores.videoMore, 1, '점']
+    ].map(([k, l, v, step, u]) => `<div class="srow"><span class="t">${l}</span><div class="stepper"><button onclick="App.stepScore('${k}',${-step})" aria-label="줄이기">−</button><b>${v}${u}</b><button onclick="App.stepScore('${k}',${step})" aria-label="늘리기">＋</button></div></div>`).join('')}
+      <div class="hint">점수는 기록에서 계산해서, 기준을 바꾸면 지난 날 점수도 새 기준으로 다시 계산돼요. 운동 점수는 아래 운동 항목마다 정해요.</div></section>
+    <div class="section-title"><span>운동 항목</span><button class="btn small primary" onclick="App.editExercise('')">＋ 추가</button></div>
+    <section class="card">${exs.length ? exs.map(e => `<div class="symrow"><div class="nm"><b>${esc(e.name)}</b><span class="sub">${e.points}점${e.link ? ' · 영상 있음' : ''}</span></div>${e.link ? `<a class="iconbtn" href="${esc(e.link)}" target="_blank" rel="noopener" aria-label="영상">▶</a>` : ''}<button class="iconbtn" onclick="App.editExercise('${e.id}')">수정</button></div>`).join('') : '<div class="sub">운동 항목이 없어요.</div>'}
+      <div class="hint">기본 항목은 즐겁고 쉽게 따라 하는 10분 유튜브 영상 3개예요. ▶로 영상을 열 수 있고, 바꾸거나 지워도 돼요.</div></section>
+    <div class="section-title"><span>영상 공부</span></div>
+    <section class="card"><div class="srow" style="border:none"><span class="t">기록한 영상 ${nVideos}개</span><button class="btn small" onclick="App.openVideos()">목록 보기</button></div></section>
+    <div class="section-title"><span>기본 시간대 (새 예측에 미리 선택)</span></div>
+    <section class="card"><div class="grid4">${TIMEFRAMES.map(t => `<button class="opt ${S.defaultTimeframe === t ? 'on' : ''}" onclick="App.setS('defaultTimeframe','${t}')">${t}</button>`).join('')}</div></section>
+    <div class="section-title"><span>저장 공간</span><span>${pct != null ? pct + '% 사용' : ''}</span></div>
+    <section class="card">
+      <dl class="kv">
+        <dt>사용 중</dt><dd>${mb(info.usage)}${info.quota ? ` <span class="sub">/ ${mb(info.quota)}</span>` : ''}</dd>
+        <dt>예측 사진</dt><dd>${info.nA}장 · ${mb(info.sA)}</dd>
+        <dt>결과 사진</dt><dd>${info.nR}장 · ${mb(info.sR)}</dd>
+        <dt>백테스트 사진</dt><dd>${info.nB}장 · ${mb(info.sB)}</dd>
+      </dl>
+      ${pct != null ? `<div class="bar" style="margin-top:12px"><i style="width:${Math.min(100, pct)}%;background:${pct > 80 ? 'var(--danger)' : 'var(--accent)'}"></i></div>` : ''}
+      <div class="label"><span>오래된 사진 정리</span></div>
+      <div class="grid3">${[[3, '3개월'], [6, '6개월'], [12, '1년']].map(([m, l]) => `<button class="opt ${cleanMonths === m ? 'on' : ''}" onclick="App.setCleanMonths(${m})">${l} 지난 것</button>`).join('')}</div>
+      <div class="hint">${cleanMonths >= 12 ? '1년' : cleanMonths + '개월'}이 지난 검증 완료 예측 <b>${tg.items.length}건</b> · 백테스트 <b>${tg.bts.length}개</b> · 사진 ${tg.ids.length}장 · ${mb(tg.bytes)}<br>사진만 지우고 점수·이유·종목·시간대·결과는 남겨요.</div>
+      <div class="btnrow"><button class="btn danger" ${tg.ids.length ? '' : 'disabled'} onclick="App.runCleanup()">사진 지우기</button><button class="btn danger" ${nCanceled ? '' : 'disabled'} onclick="App.deleteCanceled()">취소된 예측 ${nCanceled}건 삭제</button></div>
+    </section>
+    <div class="section-title"><span>내보내기 · 가져오기</span></div>
+    <section class="card">
+      <div class="sub">마지막 전체 백업: ${S.lastBackup ? fmtDate(S.lastBackup) : '없음'}</div>
+      <div class="hint">HTML 파일 하나로 저장해요. 브라우저로 열면 날짜별 점수·예측·백테스트·영상·운동이 표로 정리돼 있어 나중에 분석하기 좋고, 같은 파일로 기록을 복원할 수 있어요. 예전 .json 백업도 가져올 수 있어요.</div>
+      <div class="btnrow"><button class="btn primary" onclick="App.exportBackup()">내보내기</button>
+        <div class="btn" style="position:relative;display:flex;align-items:center;justify-content:center;flex:1">가져오기<input type="file" accept=".html,.htm,.json,text/html,application/json" style="position:absolute;inset:0;opacity:0;min-height:0;padding:0;border:none" onchange="App.importFile(this)"></div></div>
+    </section>
+    <div class="section-title"><span>앱 정보</span></div>
+    <section class="card"><div class="sub">트레이딩 훈련 노트 ${VERSION}<br>${IN_LINK ? '링크 버전' : '파일 버전'} · 오늘 점수판·필수 분석·예측·검증·백테스트·영상·운동·통계<br>데이터는 이 휴대폰의 브라우저 안에만 저장됩니다.${IN_LINK ? '<br>링크 버전의 기록은 파일 버전과 따로 저장돼요. 옮길 때는 백업을 쓰세요.' : ''}</div></section>`;
+}
+function editSymbol(id) {
+  const s = id ? symMap[id] : { name: '', category: '국내주식' };
+  const catOpts = CATEGORIES.map(c => `<option ${s.category === c ? 'selected' : ''}>${c}</option>`).join('');
+  showModal(`<h3>${id ? '종목 수정' : '종목 추가'}</h3>
+    <div class="label">이름</div><input id="mName" value="${esc(s.name)}" placeholder="예: 삼성전자" maxlength="30">
+    <div class="label">분류</div><select id="mCat">${catOpts}</select>
+    <div class="btnrow">${id ? `<button class="btn danger" onclick="App.deleteSymbol('${id}')">삭제</button>` : ''}<button class="btn" onclick="App.closeModal()">닫기</button><button class="btn primary" onclick="App.saveSymbol('${id}')">저장</button></div>`);
+}
+async function saveSymbol(id) {
+  const name = $('mName').value.trim();
+  if (!name) { uiAlert('이름을 입력하세요.'); return; }
+  if (symbols.some(s => s.name === name && s.id !== id)) { uiAlert('같은 이름의 종목이 이미 있어요.'); return; }
+  const base = id ? symMap[id] : { id: uid(), order: symbols.length ? Math.max(...symbols.map(s => s.order)) + 1 : 0 };
+  await putOne('symbols', { ...base, name, category: $('mCat').value });
+  await loadSymbols(); closeModal(); toast('저장했어요'); render();
+}
+async function deleteSymbol(id) {
+  const n = (await getAll('predictions')).filter(p => p.symbolId === id).length + (await getAll('backtests')).filter(b => b.symbolId === id).length;
+  if (n) { uiAlert(`이 종목에 예측·백테스트 기록이 ${n}건 있어 삭제할 수 없어요.\n기록을 지키기 위한 보호 기능이에요.`); return; }
+  if (!(await uiConfirm(`'${symMap[id].name}' 종목을 삭제할까요?`, '삭제', true))) return;
+  await writeMany([{ store: 'symbols', type: 'delete', key: id }]);
+  await loadSymbols(); closeModal(); toast('삭제했어요'); render();
+}
+async function moveSymbol(i, dir) {
+  const a = symbols[i], b = symbols[i + dir];
+  if (!a || !b) return;
+  await writeMany([{ store: 'symbols', type: 'put', value: { ...a, order: b.order } }, { store: 'symbols', type: 'put', value: { ...b, order: a.order } }]);
+  await loadSymbols(); render();
+}
+
+/* =========================== 백업 =========================== */
+async function importFile(input) {
+  const file = input.files && input.files[0];
+  try { input.value = ''; } catch (e) {}
+  if (!file) return;
+  let obj = null;
+  toast('파일을 읽는 중…');
+  try { obj = parseBackup(await file.text()); } catch (e) { obj = null; }
+  if (!obj || obj.app !== APP_ID || !obj.data) { uiAlert('이 앱의 백업 파일이 아니에요.\n설정 → 내보내기로 만든 .html 파일(또는 예전 .json 백업)을 고르세요.'); return; }
+  const d = obj.data, cnt = k => (d[k] || []).length, partial = obj.kind && obj.kind !== 'full';
+  showModal(`<h3>백업 가져오기</h3>
+    <div class="sub">${esc(EXPORT_KINDS[obj.kind] || '전체 백업')} · ${esc(obj.version || '')} · ${fmtDate(obj.exportedAt)}</div>
+    <dl class="kv" style="margin:14px 0">
+      <dt>종목</dt><dd>${cnt('symbols')}개</dd><dt>예측</dt><dd>${cnt('predictions')}건</dd>
+      <dt>검증</dt><dd>${cnt('reviews')}건</dd><dt>백테스트</dt><dd>${cnt('backtests')}개</dd><dt>영상</dt><dd>${cnt('videos')}개</dd><dt>운동 기록</dt><dd>${cnt('exerciseLogs')}건</dd><dt>사진</dt><dd>${cnt('photos')}장</dd></dl>
+    <div class="hint">${partial ? '이 파일은 일부 기록만 담고 있어 <b>합치기</b>만 할 수 있어요. 지금 기록은 두고 파일의 기록을 더합니다 (같은 기록은 파일 내용으로 갱신).' : '<b>덮어쓰기</b>: 지금 기록을 모두 지우고 백업으로 바꿉니다.<br><b>합치기</b>: 지금 기록은 두고 백업 내용을 더합니다 (같은 기록은 백업 내용으로 갱신).'}</div>
+    <div class="btnrow"><button class="btn" onclick="App.closeModal()">취소</button><button class="btn ${partial ? 'primary' : ''}" onclick="App.doImport('merge')">합치기</button>${partial ? '' : `<button class="btn danger" onclick="App.doImport('overwrite')">덮어쓰기</button>`}</div>`);
+  pendingImport = obj;
+}
+async function doImport(mode) {
+  if (!pendingImport) return;
+  if (mode === 'overwrite' && pendingImport.kind && pendingImport.kind !== 'full') { uiAlert('일부만 담은 파일은 덮어쓰기를 할 수 없어요.'); return; }
+  if (mode === 'overwrite' && !(await uiConfirm('지금 기록을 모두 지우고 백업으로 바꿀까요?', '덮어쓰기', true))) return;
+  try {
+    const d = pendingImport.data, ops = [];
+    if (mode === 'overwrite') STORES.forEach(s => ops.push({ store: s, type: 'clear' }));
+    DATA_STORES.forEach(s => (d[s] || []).forEach(v => ops.push({ store: s, type: 'put', value: v })));
+    (d.photos || []).forEach(p => { const { dataUrl, ...rest } = p; if (dataUrl) ops.push({ store: 'photos', type: 'put', value: { ...rest, blob: dataURLToBlob(dataUrl) } }); });
+    const imported = (d.settings || []).find(x => x.key === 'main');
+    // 마지막 백업 시각은 지금 휴대폰 기준을 유지 (백업 파일 안의 값은 백업 직전이라 비어 있음)
+    const next = mode === 'overwrite' && imported ? { ...defaultSettings(), ...imported, key: 'main', seeded: true, lastBackup: S.lastBackup } : { ...S, seeded: true };
+    ops.push({ store: 'settings', type: 'put', value: next });
+    await writeMany(ops);
+    pendingImport = null;
+    await loadSettings(); await loadSymbols(); await loadTechniques();
+    closeModal(); toast('백업을 가져왔어요');
+    view = 'today'; render();
+  } catch (e) { uiAlert('가져오기에 실패했어요. 기존 기록은 그대로입니다.\n' + (e && e.message ? e.message : '')); }
+}
+
+/* =========================== 백테스트 =========================== */
+let bf = null;            // 백테스트 작성 상태
+let techFilter = 'all';   // 기법 화면 필터: all | win | loss
+let techniques = [], techMap = {};
+const BT_RESULT = { win: '성공', loss: '실패' };
+async function loadTechniques() {
+  techniques = (await getAll('techniques')).sort((a, b) => a.order - b.order);
+  techMap = Object.fromEntries(techniques.map(t => [t.id, t]));
+}
+function techName(id) { const t = techMap[id]; return t ? t.name : '(삭제된 기법)'; }
+// 새 기법 추가 (같은 이름이 있으면 그 기법을 돌려줌)
+async function addTechniqueByName(name) {
+  name = (name || '').trim();
+  if (!name) return null;
+  const found = techniques.find(t => t.name === name);
+  if (found) return found;
+  const t = { id: uid(), name, order: techniques.length ? Math.max(...techniques.map(x => x.order)) + 1 : 0, createdAt: Date.now() };
+  await putOne('techniques', t);
+  await loadTechniques();
+  return t;
+}
+function btBadge(b) { return `<span class="rb ${b.result}">${BT_RESULT[b.result] || '-'}</span>`; }
+function todayBacktestCount(bts) { const t = dayKey(Date.now()); return bts.filter(b => dayKey(b.createdAt) === t).length; }
+async function thumbOf(ids) { const id = (ids || [])[0]; const ph = id ? await getOne('photos', id) : null; return ph ? photoUrl(ph) : ''; }
+function btCard(b, thumb) {
+  const first = (b.reason || '').split('\n')[0];
+  return `<div class="pcard" onclick="App.openBt('${b.id}')">
+    ${thumb ? `<img class="thumb" src="${thumb}" alt="">` : '<div class="thumb none">사진 없음</div>'}
+    <div class="pinfo">
+      <div class="prow"><span class="sym">${esc(techName(b.techniqueId))}</span>${btBadge(b)}<span class="right sub">${fmtDate(b.createdAt)}</span></div>
+      <div class="prow sub">${esc(symName(b.symbolId))} · ${esc(b.timeframe || '')}</div>
+      ${first ? `<div class="sub reason1" style="margin-top:4px">${esc(first)}</div>` : ''}
+    </div>
+  </div>`;
+}
+async function btCards(list) { const out = []; for (const b of list) out.push(btCard(b, await thumbOf(b.photoIds))); return out.join(''); }
+function techStats(bts, id) {
+  const l = bts.filter(b => b.techniqueId === id), w = l.filter(b => b.result === 'win').length;
+  return { n: l.length, w, l: l.length - w, rate: l.length ? Math.round(w / l.length * 100) : 0 };
+}
+async function renderBacktest() {
+  const bts = await getAll('backtests'), n = todayBacktestCount(bts), goal = S.scores.backtestGoal;
+  let h = `<section class="scorecard">
+    <div class="big"><b>${n}</b><span>/ ${goal}개 · 오늘</span><div class="streak"><b>${bts.length}개</b>전체</div></div>
+    <div class="goalbar ${n >= goal ? 'done' : ''}"><i style="width:${Math.min(100, Math.round(n / goal * 100))}%"></i></div>
+    <button class="btn primary wide" onclick="App.newBt()">＋ 백테스트 추가</button>
+  </section>`;
+  if (!techniques.length && !bts.length) {
+    h += `<div class="empty">아직 백테스트가 없어요.<br>기법별로 과거 차트를 찾아 캡처하고<br>성공·실패 이유를 남겨 보세요.</div>`;
+    $('view').innerHTML = h; return;
+  }
+  const rows = techniques.map(t => ({ t, s: techStats(bts, t.id) })).sort((a, b) => b.s.n - a.s.n);
+  h += `<div class="section-title"><span>기법별 성공률</span><span>누르면 사례 보기</span></div><section class="card">${rows.map(({ t, s }) => `<div class="brow w click" onclick="App.openTech('${t.id}')">
+      <span class="nm">${esc(t.name)}</span>
+      <span class="bar"><i style="width:${s.rate}%;background:var(--s5)"></i></span>
+      <span class="v">${s.n ? `<b>${s.rate}%</b> · ${s.n}개` : '기록 없음'}</span>
+    </div>`).join('')}</section>`;
+  const recent = bts.sort((a, b) => b.createdAt - a.createdAt).slice(0, 15);
+  if (recent.length) h += `<div class="section-title"><span>최근 기록</span></div>${await btCards(recent)}`;
+  $('view').innerHTML = h;
+}
+async function renderTech() {
+  const t = techMap[params.id];
+  if (!t) { $('view').innerHTML = '<div class="empty">기법을 찾을 수 없어요.</div>'; return; }
+  $('title').textContent = t.name;
+  const all = (await getAll('backtests')).filter(b => b.techniqueId === t.id).sort((a, b) => b.createdAt - a.createdAt);
+  const s = techStats(all, t.id);
+  const list = all.filter(b => techFilter === 'all' || b.result === techFilter);
+  let h = `<div class="stats3">
+      <div class="stat"><b>${s.n}</b><span class="sub">전체</span></div>
+      <div class="stat"><b style="color:var(--s5)">${s.w}</b><span class="sub">성공</span></div>
+      <div class="stat"><b style="color:var(--danger)">${s.l}</b><span class="sub">실패</span></div>
+    </div>
+    <div class="sub" style="margin:8px 2px 12px">성공률 <b style="color:var(--text)">${s.n ? s.rate + '%' : '-'}</b></div>
+    <div class="grid3" style="margin-bottom:10px">${[['all', '전체'], ['win', '성공만'], ['loss', '실패만']].map(([k, l]) => `<button class="opt ${techFilter === k ? 'on' : ''}" onclick="App.setTechFilter('${k}')">${l}</button>`).join('')}</div>
+    <div class="btnrow" style="margin:0 0 12px"><button class="btn primary" onclick="App.newBt('${t.id}')">＋ 이 기법 추가</button><button class="btn" onclick="App.editTech('${t.id}')">이름 수정·삭제</button></div>`;
+  h += list.length ? await btCards(list) : '<div class="empty">조건에 맞는 사례가 없어요.</div>';
+  $('view').innerHTML = h;
+}
+function startBtForm(techId) {
+  const last = S.lastBt || {};
+  bf = {
+    mode: 'new',
+    techniqueId: techId && techMap[techId] ? techId : (techMap[last.techniqueId] ? last.techniqueId : ''),
+    result: '',
+    symbolId: symMap[last.symbolId] ? last.symbolId : ((symbols[0] || {}).id || ''),
+    timeframe: last.timeframe || '',
+    photos: [], explain: [], reason: '', removedPhotoIds: [], dirty: false
+  };
+}
+async function startBtEdit(id) {
+  const b = await getOne('backtests', id);
+  if (!b) return false;
+  const conv = async ids => (await loadPhotos(ids)).map(ph => ({ id: ph.id, blob: ph.blob, url: photoUrl(ph), isNew: false }));
+  bf = { mode: 'edit', orig: b, techniqueId: b.techniqueId, result: b.result, symbolId: b.symbolId, timeframe: b.timeframe,
+    photos: await conv(b.photoIds), explain: await conv(b.explainPhotoIds), reason: b.reason || '', removedPhotoIds: [], dirty: false };
+  return true;
+}
+function cleanupBt() {
+  if (!bf) return;
+  [...bf.photos, ...bf.explain].forEach(ph => { if (ph.isNew) URL.revokeObjectURL(ph.url); });
+  bf = null;
+}
+async function renderBtForm() {
+  if (!bf) { $('view').innerHTML = ''; return; }
+  const f = bf, n = todayBacktestCount(await getAll('backtests'));
+  $('title').textContent = f.mode === 'edit' ? '백테스트 수정' : '새 백테스트';
+  const step = (k, ok) => `<span class="step ${ok ? 'ok' : ''}">${ok ? '✓' : k}</span>`;
+  const inlineAdd = (id, ph, fn, label) => `<span class="symadd"><input id="${id}" placeholder="${ph}" maxlength="30" enterkeyhint="done" onkeydown="if(event.key==='Enter'){event.preventDefault();${fn};}"><button onclick="${fn}" aria-label="${label}">＋</button></span>`;
+  const techBtns = techniques.map(t => `<button class="chip ${f.techniqueId === t.id ? 'on' : ''}" onclick="App.setB('techniqueId','${t.id}')">${esc(t.name)}</button>`).join('');
+  const symBtns = symbols.map(s => `<button class="chip ${f.symbolId === s.id ? 'on' : ''}" onclick="App.setB('symbolId','${s.id}')">${esc(s.name)}</button>`).join('');
+  const tfBtns = ALL_TIMEFRAMES.map(t => `<button class="opt ${f.timeframe === t ? 'on' : ''}" onclick="App.setB('timeframe','${t}')">${t}</button>`).join('');
+  const grid = (list, key) => list.map((ph, j) => `<div class="ph"><img src="${ph.url}" onclick="App.viewImg('${ph.url}')" alt=""><button class="x" onclick="App.removeBtPhoto('${key}',${j})">✕</button></div>`).join('');
+  const add = (key, big, label) => big
+    ? `<div class="ph addph big"><span>📷</span>${label}<input type="file" accept="image/*" multiple onchange="App.addBtPhotos('${key}',this)"></div>`
+    : `<div class="ph addph"><span>＋</span>${label}<input type="file" accept="image/*" multiple onchange="App.addBtPhotos('${key}',this)"></div>`;
+  const rlen = f.reason.trim().length;
+  $('view').innerHTML = `${f.mode === 'new' ? `<div class="banner" style="margin-bottom:12px"><span>오늘 백테스트 <b>${n} / ${S.scores.backtestGoal}</b>${n >= S.scores.backtestGoal ? ' · 목표 달성' : ''}</span></div>` : ''}
+    <section class="card">
+      <div class="label"><span>${step(1, !!f.techniqueId)}기법</span></div>
+      <div class="chips">${techBtns}${inlineAdd('newTech', techniques.length ? '새 기법 입력' : '기법 이름 입력 (예: 60MA 눌림목)', 'App.addTechInline()', '기법 추가')}</div>
+      <div class="label"><span>${step(2, !!f.result)}결과</span></div>
+      <div class="grid2"><button class="opt res win ${f.result === 'win' ? 'on' : ''}" onclick="App.setB('result','win')">성공</button><button class="opt res loss ${f.result === 'loss' ? 'on' : ''}" onclick="App.setB('result','loss')">실패</button></div>
+      <div class="label"><span>${step(3, !!f.symbolId)}종목</span></div>
+      <div class="chips">${symBtns}${inlineAdd('newSymB', '다른 종목 입력', 'App.addSymInlineB()', '종목 추가')}</div>
+      <div class="label"><span>${step(4, !!f.timeframe)}시간대</span></div>
+      <div class="grid4">${tfBtns}</div>
+      <div class="label"><span>${step(5, f.photos.length > 0)}기본 차트</span><span>${f.photos.length ? f.photos.length + '장' : ''}</span></div>
+      <div class="photos">${grid(f.photos, 'photos')}${add('photos', !f.photos.length, f.photos.length ? '더 추가' : '과거 차트 캡처 첨부')}</div>
+      <div class="label"><span>${step(6, rlen >= 10)}${f.result === 'loss' ? '실패' : f.result === 'win' ? '성공' : '성공·실패'} 이유</span><span id="rlen">${rlen}자</span></div>
+      <textarea placeholder="왜 성공했는지, 왜 실패했는지 (10자 이상)" oninput="App.inB(this.value)">${esc(f.reason)}</textarea>
+      <div class="label"><span>설명 차트 (선택)</span><span>${f.explain.length ? f.explain.length + '장' : ''}</span></div>
+      <div class="photos">${grid(f.explain, 'explain')}${add('explain', false, f.explain.length ? '더 추가' : '설명 차트')}</div>
+      <div class="hint">이유를 보여주는 차트(확대한 부분, 다른 시간대 등)를 넣으세요.</div>
+    </section>
+    <div class="savebar">${f.mode === 'edit'
+      ? `<button class="btn primary wide" onclick="App.saveBt(false)">수정 저장</button>`
+      : `<div class="btnrow" style="margin-top:0"><button class="btn primary" onclick="App.saveBt(true)">저장하고 다음</button><button class="btn" onclick="App.saveBt(false)">저장</button></div>`}</div>`;
+}
+async function saveBt(cont) {
+  const f = bf, errors = [];
+  if (!f.techniqueId || !techMap[f.techniqueId]) errors.push('기법을 고르거나 새로 입력하세요.');
+  if (!f.result) errors.push('결과(성공/실패)를 고르세요.');
+  if (!f.symbolId || !symMap[f.symbolId]) errors.push('종목을 고르세요.');
+  if (!f.timeframe) errors.push('시간대를 고르세요.');
+  if (!f.photos.length) errors.push('기본 차트 사진을 1장 이상 넣으세요.');
+  if (f.reason.trim().length < 10) errors.push('성공·실패 이유를 10자 이상 적으세요.');
+  if (errors.length) { uiAlert(errors.join('\n')); return; }
+  const now = Date.now(), ops = [], id = f.mode === 'edit' ? f.orig.id : uid();
+  const keep = (list, kind) => list.map(ph => {
+    if (!ph.isNew) return ph.id;
+    const pid = uid();
+    ops.push({ store: 'photos', type: 'put', value: { id: pid, blob: ph.blob, backtestId: id, kind, createdAt: now } });
+    return pid;
+  });
+  const photoIds = keep(f.photos, 'backtest'), explainPhotoIds = keep(f.explain, 'btexplain');
+  f.removedPhotoIds.forEach(pid => ops.push({ store: 'photos', type: 'delete', key: pid }));
+  const base = f.mode === 'edit' ? f.orig : { id, createdAt: now };
+  ops.push({ store: 'backtests', type: 'put', value: { ...base, techniqueId: f.techniqueId, result: f.result, symbolId: f.symbolId,
+    timeframe: f.timeframe, photoIds, explainPhotoIds, reason: f.reason.trim(), updatedAt: now } });
+  try { await writeMany(ops); }
+  catch (e) { uiAlert('저장에 실패했어요. 저장 공간이 부족할 수 있어요.\n' + ((e && e.message) || '')); return; }
+  S.lastBt = { techniqueId: f.techniqueId, symbolId: f.symbolId, timeframe: f.timeframe }; await saveSettings();
+  if (cont && f.mode === 'new') {
+    // 저장하고 다음: 기법·종목·시간대는 그대로, 결과·사진·이유만 비움
+    [...f.photos, ...f.explain].forEach(ph => URL.revokeObjectURL(ph.url));
+    bf = { ...f, result: '', photos: [], explain: [], reason: '', removedPhotoIds: [], dirty: false };
+    window.scrollTo(0, 0);
+    await renderBtForm();
+    const n = todayBacktestCount(await getAll('backtests')), g = S.scores.backtestGoal;
+    toast(n === g ? `오늘 ${n}개 달성! 보너스 ${S.scores.backtestBonus}점` : `저장 · 오늘 ${n}개`);
+    return;
+  }
+  toast(f.mode === 'edit' ? '수정했어요' : '저장했어요');
+  leaveSub();
+}
+async function renderBtDetail() {
+  const b = await getOne('backtests', params.id);
+  if (!b) { $('view').innerHTML = '<div class="empty">기록을 찾을 수 없어요.</div>'; return; }
+  const base = await loadPhotos(b.photoIds), ex = await loadPhotos(b.explainPhotoIds);
+  $('view').innerHTML = `<section class="card">
+      <div class="prow"><span class="sym">${esc(techName(b.techniqueId))}</span>${btBadge(b)}</div>
+      <dl class="kv" style="margin-top:12px"><dt>종목</dt><dd>${esc(symName(b.symbolId))}</dd><dt>시간대</dt><dd>${esc(b.timeframe || '-')}</dd><dt>기록</dt><dd>${fmtDate(b.createdAt)}</dd></dl>
+    </section>
+    <section class="card"><div class="label"><span>기본 차트</span><span>눌러서 크게 보기</span></div>${base.length ? bigPhotos(base) : '<div class="sub">사진이 없어요 (정리됨).</div>'}</section>
+    <section class="card"><div class="label"><span>${b.result === 'win' ? '성공' : '실패'} 이유</span></div><div class="memo">${esc(b.reason)}</div>
+      ${ex.length ? `<div class="label"><span>설명 차트 ${ex.length}장</span></div>${bigPhotos(ex)}` : ''}</section>
+    <div class="btnrow"><button class="btn" onclick="App.editBt('${b.id}')">수정</button><button class="btn danger" onclick="App.deleteBt('${b.id}')">삭제</button></div>`;
+}
+async function deleteBt(id) {
+  if (!(await uiConfirm('이 백테스트를 사진까지 지울까요?\n되돌릴 수 없어요.', '삭제', true))) return;
+  const b = await getOne('backtests', id);
+  const ops = [{ store: 'backtests', type: 'delete', key: id }];
+  [...(b.photoIds || []), ...(b.explainPhotoIds || [])].forEach(p => ops.push({ store: 'photos', type: 'delete', key: p }));
+  await writeMany(ops);
+  toast('삭제했어요'); leaveSub();
+}
+function editTech(id) {
+  const t = techMap[id];
+  showModal(`<h3>기법 수정</h3>
+    <div class="label">이름</div><input id="mTech" value="${esc(t.name)}" maxlength="30">
+    <div class="btnrow"><button class="btn danger" onclick="App.deleteTech('${id}')">삭제</button><button class="btn" onclick="App.closeModal()">닫기</button><button class="btn primary" onclick="App.saveTech('${id}')">저장</button></div>`);
+}
+async function saveTech(id) {
+  const name = $('mTech').value.trim();
+  if (!name) { uiAlert('이름을 입력하세요.'); return; }
+  if (techniques.some(t => t.name === name && t.id !== id)) { uiAlert('같은 이름의 기법이 이미 있어요.'); return; }
+  await putOne('techniques', { ...techMap[id], name });
+  await loadTechniques(); closeModal(); toast('저장했어요'); render();
+}
+async function deleteTech(id) {
+  const n = (await getAll('backtests')).filter(b => b.techniqueId === id).length;
+  if (n) { uiAlert(`이 기법에 기록이 ${n}개 있어 삭제할 수 없어요.\n기록을 지키기 위한 보호 기능이에요.`); return; }
+  if (!(await uiConfirm(`'${techMap[id].name}' 기법을 삭제할까요?`, '삭제', true))) return;
+  await writeMany([{ store: 'techniques', type: 'delete', key: id }]);
+  await loadTechniques(); closeModal(); toast('삭제했어요');
+  if (view === 'tech') leaveSub(); else render();
+}
+
+/* =========================== 영상 공부 =========================== */
+let vf = null;   // 영상 작성 상태
+const VIDEO_MIN = 30;   // 배운 점이 이 글자 수 이상이어야 점수
+function startVideoForm() { vf = { mode: 'new', url: '', title: '', note: '', dirty: false }; }
+async function startVideoEdit(id) {
+  const v = await getOne('videos', id);
+  if (!v) return false;
+  vf = { mode: 'edit', orig: v, url: v.url || '', title: v.title || '', note: v.note || '', dirty: false };
+  return true;
+}
+function videoHost(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return u || '영상'; } }
+function noteLenHtml(n) { return n >= VIDEO_MIN ? `<span style="color:var(--s5)">${n}자 · 점수 인정</span>` : `${n}자 · ${VIDEO_MIN}자 이상이면 점수`; }
+function renderVideoForm() {
+  const f = vf;
+  if (!f) { $('view').innerHTML = ''; return; }
+  $('title').textContent = f.mode === 'edit' ? '영상 공부 수정' : '영상 공부';
+  $('view').innerHTML = `<section class="card">
+      <div class="label"><span>영상 링크</span></div>
+      <input type="url" inputmode="url" placeholder="https://youtu.be/..." value="${esc(f.url)}" oninput="App.inV('url',this.value)">
+      <div class="label"><span>제목 (선택)</span></div>
+      <input placeholder="영상 제목" maxlength="100" value="${esc(f.title)}" oninput="App.inV('title',this.value)">
+      <div class="label"><span>느끼고 배운 점</span><span id="vlen">${noteLenHtml(f.note.trim().length)}</span></div>
+      <textarea style="min-height:180px" placeholder="영상에서 배운 것, 내 매매에 적용할 점" oninput="App.inV('note',this.value)">${esc(f.note)}</textarea>
+      ${f.mode === 'edit' && f.orig.url ? `<a class="btn small" style="margin-top:10px" href="${esc(f.orig.url)}" target="_blank" rel="noopener">영상 열기 ↗</a>` : ''}
+    </section>
+    <div class="savebar"><div class="btnrow" style="margin-top:0">${f.mode === 'edit' ? `<button class="btn danger" onclick="App.deleteVideo('${f.orig.id}')">삭제</button>` : ''}<button class="btn primary" onclick="App.saveVideo()">${f.mode === 'edit' ? '수정 저장' : '저장'}</button></div></div>`;
+}
+async function saveVideo() {
+  const f = vf, url = f.url.trim(), note = f.note.trim(), errors = [];
+  if (!/^https?:\/\/\S+\.\S+/i.test(url)) errors.push('영상 링크(https://로 시작)를 붙여 넣으세요.');
+  if (!note) errors.push('느끼고 배운 점을 적으세요.');
+  if (errors.length) { uiAlert(errors.join('\n')); return; }
+  if (note.length < VIDEO_MIN && !(await uiConfirm(`배운 점이 ${note.length}자예요. ${VIDEO_MIN}자 이상이어야 점수가 들어가요.\n그래도 저장할까요?`, '그래도 저장'))) return;
+  const now = Date.now();
+  const base = f.mode === 'edit' ? f.orig : { id: uid(), createdAt: now };
+  await putOne('videos', { ...base, url, title: f.title.trim(), note, updatedAt: now });
+  toast(note.length >= VIDEO_MIN ? '저장했어요 · 점수 인정' : '저장했어요');
+  leaveSub();
+}
+async function deleteVideo(id) {
+  if (!(await uiConfirm('이 영상 기록을 지울까요?', '삭제', true))) return;
+  await writeMany([{ store: 'videos', type: 'delete', key: id }]);
+  toast('삭제했어요'); leaveSub();
+}
+function videoCard(v) {
+  const ok = (v.note || '').trim().length >= VIDEO_MIN;
+  return `<section class="card">
+    <div class="prow"><b class="vt" onclick="App.editVideo('${v.id}')">${esc(v.title || videoHost(v.url))}</b><span class="right sub">${fmtDate(v.createdAt)}</span></div>
+    <div class="vnote" onclick="App.editVideo('${v.id}')">${esc(v.note)}</div>
+    <div class="prow" style="margin-top:10px"><a class="btn small" href="${esc(v.url)}" target="_blank" rel="noopener">영상 열기 ↗</a>${ok ? '' : `<span class="sub">${VIDEO_MIN}자 미만 · 점수 없음</span>`}<button class="btn small right" onclick="App.editVideo('${v.id}')">수정</button></div>
+  </section>`;
+}
+async function renderVideos() {
+  const vs = (await getAll('videos')).sort((a, b) => b.createdAt - a.createdAt);
+  $('view').innerHTML = `<button class="btn primary wide" style="margin-bottom:12px" onclick="App.newVideo()">＋ 영상 공부 기록</button>`
+    + `<div class="sub" style="margin:0 2px 10px">모두 ${vs.length}개</div>`
+    + (vs.length ? vs.map(videoCard).join('') : '<div class="empty">아직 기록한 영상이 없어요.</div>');
+}
+
+/* =========================== 운동 =========================== */
+// 기본 운동 항목: 즐겁고 쉽게 따라 하는 10분 영상 3개 (설정에서 바꿀 수 있음)
+const DEFAULT_EXERCISES = [
+  { name: '집에서 신나게 걷기 10분', points: 5, link: 'https://www.youtube.com/watch?v=6VlRVsCGuhw' },
+  { name: '서서 하는 유산소 10분', points: 5, link: 'https://www.youtube.com/watch?v=-1xXC90r7Xg' },
+  { name: '자기 전 누워서 스트레칭 10분', points: 3, link: 'https://www.youtube.com/watch?v=890slRHDElY' }
+];
+// v1.0.0에서 넣었던 기본 항목 (v1.1.0에서 교체 대상)
+const OLD_DEFAULT_LINKS = ['https://www.youtube.com/watch?v=21iOcDfoOGg', 'https://www.youtube.com/watch?v=rmJ4S_Ws75c',
+  'https://www.youtube.com/watch?v=uPOWvBj7nFY', 'https://www.youtube.com/watch?v=A4M2sNWU1Qk'];
+const EX_VERSION = 2;
+async function seedExercises() {
+  const all = await getAll('exercises'), now = Date.now(), ops = [];
+  const addNew = () => DEFAULT_EXERCISES.forEach((e, i) => {
+    if (!all.some(x => x.link === e.link && x.active !== false)) ops.push({ store: 'exercises', type: 'put', value: { id: uid(), ...e, order: 100 + i, active: true, createdAt: now } });
+  });
+  if (!S.exSeeded) {
+    if (!all.length) addNew();
+  } else if ((S.exVersion || 1) < EX_VERSION) {
+    // 예전 기본 항목만 정리: 기록이 있으면 목록에서만 빼고(지난 점수 유지), 없으면 삭제. 직접 만든 항목은 그대로
+    const used = new Set((await getAll('exerciseLogs')).map(l => l.exerciseId));
+    all.forEach(e => {
+      const old = OLD_DEFAULT_LINKS.includes(e.link) || (e.name === '걷기 30분' && !e.link);
+      if (!old) return;
+      if (used.has(e.id)) ops.push({ store: 'exercises', type: 'put', value: { ...e, active: false } });
+      else ops.push({ store: 'exercises', type: 'delete', key: e.id });
+    });
+    addNew();
+  } else return;
+  S.exSeeded = true; S.exVersion = EX_VERSION;
+  ops.push({ store: 'settings', type: 'put', value: S });
+  await writeMany(ops);
+}
+async function activeExercises() { return (await getAll('exercises')).filter(e => e.active !== false).sort((a, b) => (a.order || 0) - (b.order || 0)); }
+async function toggleExercise(id) {
+  const t = dayKey(Date.now()), logs = (await getAll('exerciseLogs')).filter(l => l.exerciseId === id && l.day === t);
+  if (logs.length) {
+    await writeMany(logs.map(l => ({ store: 'exerciseLogs', type: 'delete', key: l.id })));
+    toast('운동 완료를 취소했어요');
+  } else {
+    const e = await getOne('exercises', id);
+    await putOne('exerciseLogs', { id: uid(), exerciseId: id, day: t, memo: '', createdAt: Date.now() });
+    toast(`${e.name} 완료 · ${e.points}점`);
+  }
+  render();
+}
+async function exMemo(logId) {
+  const l = await getOne('exerciseLogs', logId);
+  if (!l) return;
+  const v = await uiDialog(`<h3 style="margin:0 0 10px">운동 메모</h3><textarea id="exMemoIn" placeholder="시간·횟수 등" maxlength="200">${esc(l.memo || '')}</textarea>
+    <div class="btnrow"><button class="btn" onclick="App.dlg(false)">취소</button><button class="btn primary" onclick="App.dlg(document.getElementById('exMemoIn').value)">저장</button></div>`);
+  if (typeof v !== 'string') return;
+  await putOne('exerciseLogs', { ...l, memo: v.trim() });
+  toast('메모를 저장했어요'); render();
+}
+let exDraft = null;
+async function editExercise(id) {
+  const e = id ? await getOne('exercises', id) : { name: '', points: 3, link: '' };
+  exDraft = { id, points: e.points || 0 };
+  showModal(`<h3>${id ? '운동 항목 수정' : '운동 항목 추가'}</h3>
+    <div class="label">이름</div><input id="mExName" value="${esc(e.name)}" placeholder="예: 플랭크 3분" maxlength="30">
+    <div class="label">점수</div><div class="stepper"><button onclick="App.exPts(-1)" aria-label="줄이기">−</button><b id="mExPts">${exDraft.points}점</b><button onclick="App.exPts(1)" aria-label="늘리기">＋</button></div>
+    <div class="label">따라 할 영상 링크 (선택)</div><input id="mExLink" type="url" inputmode="url" value="${esc(e.link || '')}" placeholder="https://youtu.be/...">
+    <div class="btnrow">${id ? `<button class="btn danger" onclick="App.deleteExercise('${id}')">삭제</button>` : ''}<button class="btn" onclick="App.closeModal()">닫기</button><button class="btn primary" onclick="App.saveExercise()">저장</button></div>`);
+}
+async function saveExercise() {
+  const name = $('mExName').value.trim(), link = $('mExLink').value.trim();
+  if (!name) { uiAlert('이름을 입력하세요.'); return; }
+  if (link && !/^https?:\/\//i.test(link)) { uiAlert('영상 링크는 https://로 시작해야 해요.'); return; }
+  const all = await getAll('exercises');
+  const base = exDraft.id ? all.find(x => x.id === exDraft.id) : { id: uid(), order: all.length ? Math.max(...all.map(x => x.order || 0)) + 1 : 0, createdAt: Date.now() };
+  await putOne('exercises', { ...base, name, link, points: exDraft.points, active: true });
+  closeModal(); toast('저장했어요'); render();
+}
+async function deleteExercise(id) {
+  const used = (await getAll('exerciseLogs')).some(l => l.exerciseId === id);
+  if (!(await uiConfirm(used ? '이 운동 항목을 목록에서 뺄까요?\n지난 기록과 점수는 남아요.' : '이 운동 항목을 삭제할까요?', '삭제', true))) return;
+  const e = await getOne('exercises', id);
+  if (used) await putOne('exercises', { ...e, active: false });
+  else await writeMany([{ store: 'exercises', type: 'delete', key: id }]);
+  closeModal(); toast('삭제했어요'); render();
+}
+
+/* =========================== 통계: 훈련 =========================== */
+let statMode = 'train', trainDays = 30;
+const MISSION_COLORS = { mandatory: 'var(--accent)', review: 'var(--c-review)', backtest: 'var(--s5)', video: 'var(--c-video)', exercise: 'var(--c-ex)' };
+const MISSION_LABELS = { mandatory: '필수 분석', review: '검증', backtest: '백테스트', video: '영상', exercise: '운동' };
+function statSeg() {
+  return `<div class="seg"><button class="opt ${statMode === 'train' ? 'on' : ''}" onclick="App.setStatMode('train')">훈련</button><button class="opt ${statMode === 'pred' ? 'on' : ''}" onclick="App.setStatMode('pred')">예측 점수</button></div>`;
+}
+const mdOf = k => { const [, m, d] = k.split('-'); return `${+m}/${+d}`; };
+function rateRow(label, a, b) {
+  const p = b ? Math.round(a / b * 100) : 0;
+  return `<div class="brow w"><span class="nm">${label}</span><span class="bar"><i style="width:${p}%;background:var(--accent)"></i></span><span class="v"><b>${b ? p + '%' : '-'}</b> · ${a}/${b}일</span></div>`;
+}
+async function renderTrainStats() {
+  const st = await dayStats(), t = st.today, N = trainDays, goal = S.dailyGoal || DEFAULT_GOAL;
+  const keys = []; for (let i = N - 1; i >= 0; i--) keys.push(addDays(t, -i));
+  const rows = keys.map(k => ({ k, sc: st.scoreOf(k), done: st.complete(k), before: k < st.firstDay }));
+  const live = rows.filter(r => !r.before), E = live.length;
+  const totals = live.map(r => r.sc.total), max = Math.max(goal, ...rows.map(r => r.sc.total), 1);
+  const avg = E ? Math.round(totals.reduce((a, b) => a + b, 0) / E) : 0;
+  const goalDays = live.filter(r => r.sc.total >= goal).length;
+  let best = 0, cur = 0;
+  for (let k = st.firstDay; k <= t; k = addDays(k, 1)) { if (st.complete(k)) { cur++; best = Math.max(best, cur); } else cur = 0; }
+  let h = statSeg() + `<div class="grid2" style="margin-bottom:12px"><button class="opt ${N === 7 ? 'on' : ''}" onclick="App.setTrainDays(7)">최근 7일</button><button class="opt ${N === 30 ? 'on' : ''}" onclick="App.setTrainDays(30)">최근 30일</button></div>`;
+  h += `<div class="stats3">
+    <div class="stat"><b>${avg}</b><span class="sub">하루 평균 점수</span></div>
+    <div class="stat"><b>${goalDays}<small style="font-size:13px;color:var(--muted)">/${E}일</small></b><span class="sub">목표 ${goal}점 달성</span></div>
+    <div class="stat"><b>${st.streak}<small style="font-size:13px;color:var(--muted)">/${best}</small></b><span class="sub">연속 지금/최장</span></div>
+  </div>`;
+  // 날짜별 점수 막대 (미션별로 쌓음)
+  h += `<div class="section-title"><span>날짜별 점수</span><span>목표 ${goal}점</span></div><section class="card">
+    <div class="dchart">
+      <div class="dgoal" style="bottom:${(goal / max * 100).toFixed(1)}%"></div>
+      ${rows.map(r => `<div class="dcol"><div class="dstack" style="height:${(r.sc.total / max * 100).toFixed(1)}%">${Object.keys(MISSION_COLORS).map(c => r.sc.parts[c] ? `<i style="flex:${r.sc.parts[c]};background:${MISSION_COLORS[c]}"></i>` : '').join('')}</div></div>`).join('')}
+    </div>
+    <div class="ddots">${rows.map(r => `<span class="${r.before ? '' : r.done ? 'ok' : 'no'}"></span>`).join('')}</div>
+    <div class="dx"><span>${mdOf(keys[0])}</span><span>${N === 7 ? keys.slice(1, 6).map(mdOf).join('</span><span>') + '</span><span>' : ''}${mdOf(keys[N - 1])}</span></div>
+    <div class="legend">${Object.keys(MISSION_COLORS).map(c => `<span><i style="background:${MISSION_COLORS[c]}"></i>${MISSION_LABELS[c]}</span>`).join('')}</div>
+    <div class="hint">아래 점: 초록 = 필수 분석 완료, 빨강 = 빠진 날 · 가로선 = 하루 목표</div>
+  </section>`;
+  // 미션별 달성률
+  h += `<div class="section-title"><span>미션 달성률</span><span>최근 ${N}일</span></div><section class="card">
+    ${rateRow('필수 분석', live.filter(r => r.done).length, E)}
+    ${rateRow(`백테스트 ${S.scores.backtestGoal}개`, live.filter(r => r.sc.d.backtests >= S.scores.backtestGoal).length, E)}
+    ${rateRow('영상 공부', live.filter(r => r.sc.d.videoOk > 0).length, E)}
+    ${rateRow('운동', live.filter(r => r.sc.d.exDone.size > 0).length, E)}
+  </section>`;
+  // 백테스트 기법별 (기간 안)
+  const from = keys[0], bts = (await getAll('backtests')).filter(b => dayKey(b.createdAt) >= from);
+  if (bts.length) {
+    const rowsT = techniques.map(tq => ({ tq, s: techStats(bts, tq.id) })).filter(x => x.s.n).sort((a, b) => b.s.n - a.s.n);
+    const worst = rowsT.slice().sort((a, b) => b.s.l - a.s.l)[0];
+    h += `<div class="section-title"><span>백테스트 기법별 성공률</span><span>${bts.length}개</span></div><section class="card">
+      ${rowsT.map(({ tq, s }) => `<div class="brow w click" onclick="App.openTech('${tq.id}')"><span class="nm">${esc(tq.name)}</span><span class="bar"><i style="width:${s.rate}%;background:var(--s5)"></i></span><span class="v"><b>${s.rate}%</b> · ${s.n}개</span></div>`).join('')}
+      ${worst && worst.s.l ? `<div class="hint">실패가 가장 많은 기법: <b>${esc(worst.tq.name)}</b> (실패 ${worst.s.l}개) — 실패 이유를 모아 보세요.</div>` : ''}
+    </section>`;
+  }
+  // 영상·운동
+  const vids = (await getAll('videos')).filter(v => dayKey(v.createdAt) >= from);
+  const logs = (await getAll('exerciseLogs')).filter(l => l.day >= from), exs = await getAll('exercises');
+  const exCount = exs.map(e => ({ e, n: new Set(logs.filter(l => l.exerciseId === e.id).map(l => l.day)).size })).filter(x => x.n).sort((a, b) => b.n - a.n);
+  const exMax = Math.max(1, ...exCount.map(x => x.n));
+  h += `<div class="section-title"><span>영상 공부 · 운동</span><span>최근 ${N}일</span></div><section class="card">
+    <div class="srow"><span class="t">영상 공부</span><b>${vids.length}개</b></div>
+    ${exCount.length ? exCount.map(({ e, n }) => `<div class="brow w"><span class="nm">${esc(e.name)}</span><span class="bar"><i style="width:${Math.round(n / exMax * 100)}%;background:var(--c-ex)"></i></span><span class="v">${n}회</span></div>`).join('') : '<div class="sub" style="padding:8px 0">운동 기록이 없어요.</div>'}
+  </section>`;
+  $('view').innerHTML = h;
+}
+
+/* =========================== 내보내기 (HTML) =========================== */
+const EXPORT_KINDS = { full: '전체 백업', nophoto: '분석용 (사진 제외)', recent: '최근 30일' };
+function fmtFull(ms) { if (!ms) return ''; const d = new Date(ms); return `${dayKey(ms)} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+async function buildExport(kind) {
+  const data = {};
+  for (const s of [...DATA_STORES, 'settings']) data[s] = await getAll(s);
+  const cut = kind === 'recent' ? Date.now() - 30 * 86400000 : 0;
+  if (kind === 'recent') {
+    const rmap = Object.fromEntries(data.reviews.map(r => [r.predictionId, r]));
+    data.predictions = data.predictions.filter(p => p.createdAt >= cut || (rmap[p.id] && (rmap[p.id].reviewedAt || 0) >= cut));
+    const keep = new Set(data.predictions.map(p => p.id));
+    data.reviews = data.reviews.filter(r => keep.has(r.predictionId));
+    data.backtests = data.backtests.filter(b => b.createdAt >= cut);
+    data.videos = data.videos.filter(v => v.createdAt >= cut);
+    data.exerciseLogs = data.exerciseLogs.filter(l => l.createdAt >= cut);
+    data.groups = [];
+  }
+  data.photos = [];
+  if (kind !== 'nophoto') {
+    let photos;
+    if (kind === 'full') photos = await getAll('photos');
+    else {
+      const need = new Set();
+      data.predictions.forEach(p => (p.photoIds || []).forEach(i => need.add(i)));
+      data.reviews.forEach(r => (r.resultPhotoIds || []).forEach(i => need.add(i)));
+      data.backtests.forEach(b => [...(b.photoIds || []), ...(b.explainPhotoIds || [])].forEach(i => need.add(i)));
+      photos = (await Promise.all([...need].map(id => getOne('photos', id)))).filter(Boolean);
+    }
+    for (const p of photos) { if (!p.blob) continue; const { blob, ...rest } = p; data.photos.push({ ...rest, dataUrl: await blobToDataURL(blob) }); }
+  }
+  return { app: APP_ID, version: VERSION, exportedAt: Date.now(), kind, from: cut || null, data };
+}
+// 내보낸 HTML: 표로 보는 보고서 + 복원용 데이터(<script type="application/json" id="tn-backup">)
+function reportHtml(pl, st) {
+  const d = pl.data, E = esc, withPhotos = pl.kind !== 'nophoto';
+  const find = (arr, id) => (arr || []).find(x => x.id === id);
+  const sym = id => E((find(d.symbols, id) || {}).name || '(삭제된 종목)');
+  const tech = id => E((find(d.techniques, id) || {}).name || '(삭제된 기법)');
+  const rmap = Object.fromEntries((d.reviews || []).map(r => [r.predictionId, r]));
+  const ph = ids => { ids = ids || []; if (!ids.length) return ''; return withPhotos ? `<div class="ph">${ids.map(i => `<img data-photo="${E(i)}" alt="">`).join('')}</div>` : `<span class="muted">사진 ${ids.length}장 (제외)</span>`; };
+  const txt = s => `<div class="txt">${E(s || '')}</div>`;
+  const table = (head, rows) => rows.length ? `<div class="tw"><table><thead><tr>${head.map(x => `<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>` : '<p class="muted">기록 없음</p>';
+  // 날짜별 점수 (지금 앱의 점수 기준으로 계산)
+  const startDay = pl.from ? dayKey(pl.from) : st.firstDay, mand = mandatoryList().length;
+  const dayRows = [];
+  for (let k = st.today; k >= startDay; k = addDays(k, -1)) {
+    const s = st.scoreOf(k), P = s.parts;
+    dayRows.push(`<tr><td>${k}</td><td class="n"><b>${s.total}</b></td><td class="n">${s.d.mandDone.size}/${mand} (${P.mandatory})</td><td class="n">${s.d.reviews} (${P.review})</td><td class="n">${s.d.backtests} (${P.backtest})</td><td class="n">${s.d.videos} (${P.video})</td><td class="n">${s.d.exDone.size} (${P.exercise})</td><td>${s.complete ? 'O' : 'X'}</td></tr>`);
+  }
+  const preds = (d.predictions || []).slice().sort((a, b) => b.createdAt - a.createdAt);
+  const predRows = preds.map(p => { const r = rmap[p.id]; return `<tr><td>${fmtFull(p.createdAt)}</td><td>${sym(p.symbolId)}</td><td>${E(p.timeframe)}</td><td>${fmtFull(p.expectedAt)}</td><td>${STATUS[p.status] || E(p.status)}</td><td>${txt(p.memo)}</td><td class="n">${r && r.score ? r.score : ''}</td><td>${r ? fmtFull(r.reviewedAt) : ''}</td><td>${r ? txt(r.reason) : ''}</td><td>${ph(p.photoIds)}</td><td>${r ? ph(r.resultPhotoIds) : ''}</td></tr>`; });
+  const bts = (d.backtests || []).slice().sort((a, b) => b.createdAt - a.createdAt);
+  const techRows = (d.techniques || []).map(t => { const l = bts.filter(b => b.techniqueId === t.id), w = l.filter(b => b.result === 'win').length; return { t, n: l.length, w }; })
+    .filter(x => x.n).sort((a, b) => b.n - a.n).map(x => `<tr><td>${E(x.t.name)}</td><td class="n">${x.n}</td><td class="n">${x.w}</td><td class="n">${x.n - x.w}</td><td class="n">${Math.round(x.w / x.n * 100)}%</td></tr>`);
+  const btRows = bts.map(b => `<tr><td>${fmtFull(b.createdAt)}</td><td>${tech(b.techniqueId)}</td><td>${sym(b.symbolId)}</td><td>${E(b.timeframe)}</td><td>${BT_RESULT[b.result] || ''}</td><td>${txt(b.reason)}</td><td>${ph(b.photoIds)}</td><td>${ph(b.explainPhotoIds)}</td></tr>`);
+  const vids = (d.videos || []).slice().sort((a, b) => b.createdAt - a.createdAt);
+  const vRows = vids.map(v => `<tr><td>${fmtFull(v.createdAt)}</td><td>${E(v.title || '')}</td><td><a href="${E(v.url)}" target="_blank" rel="noopener">${E(v.url)}</a></td><td class="n">${(v.note || '').trim().length}</td><td>${txt(v.note)}</td></tr>`);
+  const logs = (d.exerciseLogs || []).slice().sort((a, b) => b.createdAt - a.createdAt);
+  const exRows = logs.map(l => { const e = find(d.exercises, l.exerciseId) || {}; return `<tr><td>${E(l.day)}</td><td>${E(e.name || '(삭제된 운동)')}</td><td class="n">${e.points || 0}</td><td>${E(l.memo || '')}</td></tr>`; });
+  const reviewed = (d.reviews || []).filter(r => r.score);
+  const avgScore = reviewed.length ? (reviewed.reduce((a, r) => a + r.score, 0) / reviewed.length).toFixed(2) : '-';
+  const winAll = bts.filter(b => b.result === 'win').length;
+  const dayTotals = []; for (let k = st.today; k >= startDay; k = addDays(k, -1)) dayTotals.push(st.scoreOf(k).total);
+  const json = JSON.stringify(pl).replace(/</g, '\\u003c');
+  const title = `트레이딩 훈련 노트 ${EXPORT_KINDS[pl.kind]} ${dayKey(pl.exportedAt)}`;
+  return `<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${E(title)}</title>
+<style>
+:root{--bg:#fff;--fg:#1a1d23;--muted:#6b7280;--line:#e5e7eb;--head:#f3f4f6;--accent:#b45309}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--fg:#e8eaed;--muted:#9aa0aa;--line:#2a2f3a;--head:#181b22;--accent:#f5b301;color-scheme:dark}}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;padding:16px max(16px,env(safe-area-inset-left)) 40px}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:16px;margin:28px 0 8px;padding-top:12px;border-top:2px solid var(--line)}
+.muted{color:var(--muted);font-size:12px}nav a{margin-right:10px;color:var(--accent);font-size:13px;white-space:nowrap}
+.sum{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:12px 0}
+.sum div{border:1px solid var(--line);border-radius:10px;padding:10px}.sum b{display:block;font-size:20px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:13px}
+th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
+th{background:var(--head);position:sticky;top:0;white-space:nowrap}td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.txt{white-space:pre-wrap;min-width:180px;max-width:360px}
+.ph{display:flex;gap:4px;flex-wrap:wrap;min-width:90px}.ph img{width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--line);cursor:zoom-in;background:var(--head)}
+.ph img.zoom{position:fixed;inset:0;width:100%;height:100%;object-fit:contain;background:rgba(0,0,0,.92);z-index:9;border:none;border-radius:0;cursor:zoom-out}
+a{color:var(--accent);word-break:break-all}
+</style></head><body>
+<h1>트레이딩 훈련 노트 — ${EXPORT_KINDS[pl.kind]}</h1>
+<div class="muted">내보낸 시각 ${fmtFull(pl.exportedAt)} · 앱 ${E(pl.version)} · ${pl.from ? `${dayKey(pl.from)}부터` : '전체 기간'} · 점수는 내보낼 때의 점수 기준으로 계산</div>
+<nav style="margin-top:10px"><a href="#days">날짜별 점수</a><a href="#preds">예측·검증</a><a href="#techs">기법별</a><a href="#bts">백테스트</a><a href="#videos">영상</a><a href="#ex">운동</a></nav>
+<div class="sum">
+  <div><b>${dayTotals.length ? Math.round(dayTotals.reduce((a, b) => a + b, 0) / dayTotals.length) : 0}</b>하루 평균 점수</div>
+  <div><b>${dayTotals.filter(x => x >= (S.dailyGoal || DEFAULT_GOAL)).length}/${dayTotals.length}</b>목표 ${S.dailyGoal || DEFAULT_GOAL}점 달성일</div>
+  <div><b>${st.streak}일</b>지금 연속 달성</div>
+  <div><b>${preds.length}</b>예측 (검증 ${reviewed.length}, 평균 ${avgScore}점)</div>
+  <div><b>${bts.length}</b>백테스트 (성공률 ${bts.length ? Math.round(winAll / bts.length * 100) + '%' : '-'})</div>
+  <div><b>${vids.length}</b>영상 공부</div>
+  <div><b>${logs.length}</b>운동 기록</div>
+</div>
+<h2 id="days">날짜별 점수</h2><p class="muted">괄호 안은 점수. 필수 완료 O = 필수 종목을 모두 분석한 날</p>
+${table(['날짜', '총점', '필수 분석', '검증', '백테스트', '영상', '운동', '필수 완료'], dayRows)}
+<h2 id="preds">예측·검증 (${preds.length})</h2>
+${table(['등록', '종목', '시간대', '예정', '상태', '분석 글', '점수', '검증', '이유 분석', '예측 사진', '결과 사진'], predRows)}
+<h2 id="techs">백테스트 기법별</h2>
+${table(['기법', '개수', '성공', '실패', '성공률'], techRows)}
+<h2 id="bts">백테스트 (${bts.length})</h2>
+${table(['날짜', '기법', '종목', '시간대', '결과', '이유', '기본 차트', '설명 차트'], btRows)}
+<h2 id="videos">영상 공부 (${vids.length})</h2>
+${table(['날짜', '제목', '링크', '글자 수', '느끼고 배운 점'], vRows)}
+<h2 id="ex">운동 기록 (${logs.length})</h2>
+${table(['날짜', '항목', '점수', '메모'], exRows)}
+<p class="muted" style="margin-top:28px">이 파일을 트레이딩 훈련 노트의 설정 → 가져오기에서 고르면 기록을 복원할 수 있어요.${pl.kind === 'full' ? '' : ' (이 파일은 일부만 담고 있어 지금 기록에 합치기만 할 수 있어요.)'}</p>
+<script type="application/json" id="tn-backup">${json}<\/script>
+<script>
+(function(){var el=document.getElementById('tn-backup');var data;try{data=JSON.parse(el.textContent);}catch(e){return;}
+var m={};(data.data.photos||[]).forEach(function(p){m[p.id]=p.dataUrl;});
+document.querySelectorAll('img[data-photo]').forEach(function(im){var u=m[im.getAttribute('data-photo')];if(u)im.src=u;else{var s=document.createElement('span');s.className='muted';s.textContent='사진 없음';im.replaceWith(s);}});
+document.addEventListener('click',function(e){if(e.target.matches&&e.target.matches('img[data-photo]'))e.target.classList.toggle('zoom');});})();
+<\/script>
+</body></html>`;
+}
+function exportBackup() {
+  showModal(`<h3>내보내기</h3>
+    <div class="hint" style="font-size:14px">HTML 파일 하나로 저장해요. 휴대폰 브라우저로 열면 표로 정리된 기록을 볼 수 있고, 이 앱의 '가져오기'로 다시 복원할 수 있어요.</div>
+    <div class="calrow"><div class="t"><b>전체 백업</b><br><span class="sub">모든 기록 + 사진. 휴대폰을 바꾸거나 정리하기 전에.</span></div><button class="btn small primary" onclick="App.doExport('full')">저장</button></div>
+    <div class="calrow"><div class="t"><b>분석용 (사진 제외)</b><br><span class="sub">모든 기록, 파일이 가벼워요. 표로 보고 분석할 때.</span></div><button class="btn small" onclick="App.doExport('nophoto')">저장</button></div>
+    <div class="calrow"><div class="t"><b>최근 30일</b><br><span class="sub">최근 30일 기록 + 사진.</span></div><button class="btn small" onclick="App.doExport('recent')">저장</button></div>
+    <div class="btnrow"><button class="btn" onclick="App.closeModal()">닫기</button></div>`);
+}
+async function doExport(kind) {
+  closeModal();
+  try {
+    toast('파일을 만드는 중…');
+    const pl = await buildExport(kind), st = await dayStats();
+    const html = reportHtml(pl, st);
+    const name = `트레이딩훈련노트_${{ full: '백업', nophoto: '분석용', recent: '최근30일' }[kind]}_${stamp()}.html`;
+    const ok = await saveFile(new Blob([html], { type: 'text/html' }), name);
+    if (!ok) return;
+    if (kind === 'full') { S.lastBackup = Date.now(); await saveSettings(); }
+    toast('저장했어요');
+    if (!overlayOpen()) render();
+  } catch (e) { uiAlert('내보내기에 실패했어요.\n' + ((e && e.message) || '')); }
+}
+// 백업 파일 읽기: 새 HTML(#tn-backup) 또는 예전 JSON
+function parseBackup(text) {
+  const t = (text || '').trim();
+  if (t.startsWith('{')) return JSON.parse(t);
+  const doc = new DOMParser().parseFromString(text, 'text/html');
+  const el = doc.getElementById('tn-backup');
+  return el ? JSON.parse(el.textContent) : null;
+}
+
+/* =========================== 모달 / 사진 보기 =========================== */
+function showModal(html) {
+  $('modalRoot').innerHTML = `<div class="modal-bg" onclick="if(event.target===this)App.closeModal()"><div class="modal">${html}</div></div>`;
+}
+function closeModal() { $('modalRoot').innerHTML = ''; pendingImport = null; }
+function viewImg(url) {
+  $('modalRoot').innerHTML = `<div class="viewer" onclick="App.closeModal()"><img src="${url}" alt=""><button class="close">✕</button></div>`;
+}
+
+/* =========================== 외부 호출용 =========================== */
+const App = {
+  tab(v) { if (isSub(view)) return; view = v; params = {}; window.scrollTo(0, 0); render(); },
+  newPrediction(symId) { closeModal(); startNewForm(typeof symId === 'string' ? symId : ''); pushPage('form'); },
+  // + 버튼: 화면에 따라
+  fab() {
+    if (view === 'backtest') return App.newBt();
+    if (view === 'home' || view === 'records') return App.newPrediction();
+    showModal(`<h3>무엇을 기록할까요?</h3><div class="chooser">
+      <button onclick="App.newPrediction()"><b>예측</b><span class="sub">차트 사진과 예정 시간</span></button>
+      <button onclick="App.newBt()"><b>백테스트</b><span class="sub">기법별 과거 차트와 성공·실패 이유</span></button>
+      <button onclick="App.newVideo()"><b>영상 공부</b><span class="sub">링크와 느끼고 배운 점</span></button>
+    </div><div class="btnrow"><button class="btn" onclick="App.closeModal()">닫기</button></div>`);
+  },
+  // 백테스트
+  newBt(techId) { closeModal(); startBtForm(typeof techId === 'string' ? techId : ''); pushPage('btform'); },
+  openTech(id) { techFilter = 'all'; pushPage('tech', { id }); },
+  openBt(id) { pushPage('btdetail', { id }); },
+  async editBt(id) { if (await startBtEdit(id)) pushPage('btform'); },
+  deleteBt, editTech, saveTech, deleteTech,
+  setTechFilter(k) { techFilter = k; render(); },
+  setB(k, v) { bf[k] = v; bf.dirty = true; renderBtForm(); },
+  inB(v) { bf.reason = v; bf.dirty = true; const el = $('rlen'); if (el) el.textContent = v.trim().length + '자'; },
+  async addTechInline() {
+    const input = $('newTech'), name = input ? input.value.trim() : '';
+    if (!name) { toast('기법 이름을 입력하세요'); if (input) input.focus(); return; }
+    const existed = techniques.some(t => t.name === name);
+    const t = await addTechniqueByName(name);
+    bf.techniqueId = t.id; bf.dirty = true; renderBtForm();
+    toast(existed ? `'${name}' 선택` : `'${name}' 추가 · 다음에도 버튼으로 남아요`);
+  },
+  async addSymInlineB() {
+    const input = $('newSymB'), name = input ? input.value.trim() : '';
+    if (!name) { toast('종목 이름을 입력하세요'); if (input) input.focus(); return; }
+    const existed = symbols.some(s => s.name === name);
+    const sy = await addSymbolByName(name, '국내주식');
+    bf.symbolId = sy.id; bf.dirty = true; renderBtForm();
+    toast(existed ? `'${name}' 선택` : `'${name}' 추가`);
+  },
+  async addBtPhotos(key, input) {
+    const added = await readPhotoFiles(input, 1080);
+    if (!bf || !added.length) return;
+    bf[key].push(...added); bf.dirty = true; renderBtForm();
+  },
+  removeBtPhoto(key, j) {
+    const ph = bf[key][j];
+    if (ph.isNew) URL.revokeObjectURL(ph.url); else bf.removedPhotoIds.push(ph.id);
+    bf[key].splice(j, 1); bf.dirty = true; renderBtForm();
+  },
+  saveBt,
+  // 영상 공부
+  newVideo() { closeModal(); startVideoForm(); pushPage('videoform'); },
+  async editVideo(id) { if (await startVideoEdit(id)) pushPage('videoform'); },
+  openVideos() { pushPage('videos'); },
+  inV(k, v) { vf[k] = v; vf.dirty = true; if (k === 'note') { const el = $('vlen'); if (el) el.innerHTML = noteLenHtml(v.trim().length); } },
+  saveVideo, deleteVideo,
+  // 운동
+  toggleEx(id) { toggleExercise(id); },
+  exMemo, editExercise, saveExercise, deleteExercise,
+  exPts(d) { exDraft.points = Math.max(0, Math.min(50, exDraft.points + d)); const el = $('mExPts'); if (el) el.textContent = exDraft.points + '점'; },
+  // 통계
+  setStatMode(m) { statMode = m; render(); },
+  setTrainDays(n) { trainDays = n; render(); },
+  doExport,
+  openDetail(id) { pushPage('detail', { id }); },
+  async openReview(id) { if (await startReview(id)) pushPage('review', { id }); },
+  async alarmGo(id) {
+    closeModal();
+    if (view === 'review' && params.id === id) return;
+    if (await startReview(id)) pushPage('review', { id });
+  },
+  async editPrediction(id) { if (await startEditForm(id)) pushPage('form'); },
+  cancelPrediction, restorePrediction, deletePrediction, addToCalendar, calendarChoice,
+  markCal(id) { markCalendar([id]); },
+  calNext(ids, reason) { closeModal(); calendarChoice(ids, reason, true); },
+  dlg(v) { closeDialog(v); },
+  // 겹쳐서 비교
+  compareReview() { openCompare(rv.analysis.map(photoUrl), rv.photos.map(ph => ph.url)); },
+  async compareDetail(id) {
+    const p = await getOne('predictions', id), r = await getOne('reviews', id);
+    openCompare((await loadPhotos(p.photoIds)).map(photoUrl), (await loadPhotos(r && r.resultPhotoIds)).map(photoUrl));
+  },
+  cmpMode(m) { cmp.mode = m; renderCompare(); },
+  cmpPick(k, i) { cmp[k] = i; cmp.adjust = false; runAlign(); },
+  cmpAuto() { cmp.adjust = false; runAlign(true); },
+  cmpAdjust(on) {
+    if (on) { cmpEnsureFit(); if (!cmp.fit) return; cmp.adjust = true; }
+    else { cmp.adjust = false; if (cmp.fit) { cmp.status = 'manual'; cmp.cache[cmp.ai + '|' + cmp.bi] = { fit: cmp.fit, status: 'manual' }; } }
+    renderCompare();
+  },
+  cmpScale(k, v) {
+    if (!cmp || !cmp.fit) return;
+    // 화면 가운데를 기준으로 크기 조절
+    const f = cmp.fit, a = $('cmpA'), b = $('cmpB');
+    const cx = b.naturalWidth / 2, cy = b.naturalHeight / 2, nv = Math.exp(Number(v) / 100);
+    if (k === 'sx') { const u = (cx - f.tx) / f.sx; f.sx = nv; f.tx = cx - u * nv; }
+    else { const w = (cy - f.ty) / f.sy; f.sy = nv; f.ty = cy - w * nv; }
+    cmpPlace();
+  },
+  cmpVal,
+  closeCompare() { cmp = null; closeModal(); },
+  // 용량 관리
+  setCleanMonths(m) { cleanMonths = m; render(); },
+  runCleanup, deleteCanceled,
+  // 예측 작성
+  setF(k, v) { form[k] = v; form.dirty = true; renderForm(); },
+  inMemo(v) { form.memo = v; form.dirty = true; const el = $('memoLen'); if (el) el.textContent = v.trim().length ? v.trim().length + '자' : ''; },
+  quick(m) { form.expectedAt = toLocalInput(Date.now() + m * 60000); form.dirty = true; renderForm(); },
+  async addSymInline() {
+    const input = $('newSym');
+    const name = input ? input.value.trim() : '';
+    if (!name) { toast('종목 이름을 입력하세요'); if (input) input.focus(); return; }
+    const existed = symbols.some(s => s.name === name);
+    const s = await addSymbolByName(name, '국내주식');
+    form.symbolId = s.id; form.dirty = true; renderForm();
+    toast(existed ? `'${name}' 선택` : `'${name}' 추가 · 다음에도 버튼으로 남아요`);
+  },
+  async addPhotos(input) {
+    const added = await readPhotoFiles(input);
+    if (!form || !added.length) return;
+    form.photos.push(...added); form.dirty = true; renderForm();
+  },
+  removePhoto(j) {
+    const ph = form.photos[j];
+    if (ph.isNew) URL.revokeObjectURL(ph.url); else form.removedPhotoIds.push(ph.id);
+    form.photos.splice(j, 1); form.dirty = true; renderForm();
+  },
+  saveForm,
+  // 검증
+  async addResultPhotos(input) {
+    const added = await readPhotoFiles(input);
+    if (!rv || !added.length) return;
+    rv.photos.push(...added); rv.dirty = true; renderReview();
+  },
+  removeResultPhoto(j) {
+    const ph = rv.photos[j];
+    if (ph.isNew) URL.revokeObjectURL(ph.url); else rv.removedPhotoIds.push(ph.id);
+    rv.photos.splice(j, 1); rv.dirty = true; renderReview();
+  },
+  setScore(n) { rv.score = n; rv.dirty = true; renderReview(); },
+  inReason(v) { rv.reason = v; rv.dirty = true; },
+  saveReview,
+  // 공통
+  viewImg, closeModal,
+  editSymbol, saveSymbol, deleteSymbol, moveSymbol,
+  async setS(key, v) { S[key] = v; await saveSettings(); render(); },
+  async requestNotify() {
+    try { await Notification.requestPermission(); } catch (e) {}
+    render();
+  },
+  testAlarm() {
+    unlockAudio();
+    setTimeout(() => { beep(); vibrate(); toast(S.alarmSound ? '알람 소리가 들리면 정상이에요' : '알람 소리가 꺼져 있어요'); }, 150);
+  },
+  // 기록
+  recPeriod(k) { recF.period = k; recF.limit = REC_PAGE; render(); },
+  recSet(k, v) { recF[k] = v; recF.limit = REC_PAGE; render(); },
+  recReset() { recF = { period: 'all', symbolId: '', timeframe: '', score: 0, limit: REC_PAGE }; render(); },
+  recMore() { recF.limit += REC_PAGE; render(); },
+  // 통계
+  statPeriod(k) { statPeriod = k; render(); },
+  statToRecords(k, v) {
+    recF = { period: statPeriod, symbolId: '', timeframe: '', score: 0, limit: REC_PAGE };
+    recF[k] = v;
+    App.tab('records');
+  },
+  // 필수 종목·점수 기준
+  async toggleMand(id) {
+    const l = S.mandatorySymbolIds || [], i = l.indexOf(id);
+    i >= 0 ? l.splice(i, 1) : l.push(id); S.mandatorySymbolIds = l;
+    await saveSettings(); render();
+  },
+  async stepScore(k, d) {
+    if (k === 'dailyGoal') S.dailyGoal = Math.max(5, Math.min(500, (S.dailyGoal || DEFAULT_GOAL) + d));
+    else S.scores[k] = Math.max(k === 'backtestGoal' ? 1 : 0, Math.min(100, (S.scores[k] || 0) + d));
+    await saveSettings(); render();
+  },
+  async resetScores() {
+    if (!(await uiConfirm('점수 기준과 하루 목표를 기본값으로 되돌릴까요?', '되돌리기'))) return;
+    S.scores = { ...DEFAULT_SCORES }; S.dailyGoal = DEFAULT_GOAL; await saveSettings(); render();
+  },
+  exportBackup, importFile, doImport
+};
+window.App = App;
+
+/* =========================== 시작 =========================== */
+(async function init() {
+  $('verTop').textContent = VERSION;
+  try {
+    if (!window.indexedDB) throw new Error('이 브라우저는 저장 기능(IndexedDB)을 지원하지 않아요.');
+    await openDB();
+    await loadSettings();
+    await seedIfNeeded();
+    await loadSettings();
+    await loadSymbols();
+    await loadTechniques();
+    await seedExercises();
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    const dueAtStart = await refreshStatuses();   // 앱을 열 때 확인 (방식 C)
+    render();
+    if (dueAtStart.length) toast(`시간이 지난 예측 ${dueAtStart.length}건 — 검증하세요`);
+    setInterval(tick, TICK_MS);                    // 앱이 열려 있을 때 알람 (방식 B)
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+  } catch (e) {
+    $('view').innerHTML = `<div class="empty">앱을 시작하지 못했어요.<br>${esc(e.message || e)}<br><br>개인정보 보호(시크릿) 모드에서는 저장이 안 될 수 있어요.</div>`;
+  }
+})();
+</script>
+</body>
+</html>
