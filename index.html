@@ -1,7 +1,7 @@
 <!--
 ================================================================================
   트레이딩 훈련 노트 (Trading Training Note) — 옛 이름: 차트 예측 검증 노트
-  버전: v1.2.0
+  버전: v1.2.1
   수정일: 2026-11-03
 --------------------------------------------------------------------------------
   [개요]
@@ -16,7 +16,7 @@
   검증: 알람 → 지금 차트 사진 → 예전 사진과 비교(자동 맞춤) → 1~5점 → 이유 분석 → 끝
   백테스트: 기법 → 성공/실패 → 종목 → 시간대 → 기본 차트 → 이유 → (설명 차트) → 저장하고 다음
 
-  [현재 기능 - v1.2.0 / 1~8단계 + 분석 글]
+  [현재 기능 - v1.2.1 / 1~8단계 + 분석 글]
   0. 오늘 (하단 '오늘' 탭, 앱을 열면 처음 보이는 화면)
      - 점수판: 오늘 점수 / 하루 목표(기본 60점), 달성률 막대, 연속 달성일, 미션별 점수 내역
      - 필수 차트 분석: 필수 종목(기본 골드·나스닥·비트코인·코스피) 체크 카드,
@@ -94,6 +94,8 @@
      - 오래된 사진 정리: 3개월·6개월·1년 지난 검증 완료 예측과 백테스트의 사진만 삭제
        (점수·이유·종목·시간대·결과는 남아 통계에 그대로 반영), 취소된 예측 모두 삭제
      - 내보내기·가져오기 (아래 [백업 파일])
+     - 자동 정리 (시작할 때·가져온 뒤): 이름이 같은 종목·기법·운동 항목이 여러 개면 하나로 합치고
+       기록을 옮김. 필수 종목이 없는 종목을 가리키면 빼고, 직접 끈 적 없이 비면 기본 4종목으로 다시 지정
   11. 기타
      - 확인·안내 창은 모두 화면 안 창 (링크 페이지에서 alert·confirm이 막혀 있어서)
      - 저장 공간 80% 이상이면 오늘 화면 위에 정리 안내
@@ -135,9 +137,14 @@
   사진 구분(kind): analysis(예측) / result(지금 차트) / backtest(기본 차트) / btexplain(설명 차트)
   예측 상태: waiting(대기중) → due(확인 필요) → done(검증 완료) / canceled(취소)
   설정: mandatorySymbolIds, scores, dailyGoal, lastNightRemind, lastBt(마지막 백테스트 선택),
-    exSeeded·exVersion(기본 운동 항목을 넣었는지·몇 번째 기본 목록인지) 등. 새로 생긴 값은 시작할 때 기본값으로 채운다.
+    exSeeded·exVersion(기본 운동 항목을 넣었는지·몇 번째 기본 목록인지),
+    mandatoryEdited(필수 종목을 직접 고른 적 있는지) 등. 새로 생긴 값은 시작할 때 기본값으로 채운다.
 
   [변경 이력]
+  v1.2.1 (2026-11-03)
+    - 수정: 백업을 가져온 뒤 '필수 차트 분석 0 / 0 · 필수 종목이 없어요'로 나오던 문제
+            (필수 종목이 사라진 종목 번호를 가리킴 → 시작할 때 이름으로 다시 찾아 지정)
+    - 수정: 백업 '합치기'로 같은 이름의 종목·기법·운동 항목이 두 개씩 생기던 문제 → 하나로 합치고 기록 옮김
   v1.2.0 (2026-11-03)
     - 추가: 백테스트 시간대에 3분 (1분·3분·5분·…·주 13종). 예측 등록 시간대는 그대로
   v1.1.0 (2026-11-01)
@@ -427,7 +434,7 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
 <script>
 'use strict';
 /* =========================== 상수 =========================== */
-const VERSION = 'v1.2.0';
+const VERSION = 'v1.2.1';
 const APP_ID = 'chart-prediction-journal';
 const DB_NAME = 'chartPredictionJournal';
 const DB_VER = 2;   // v0.7.0: 백테스트·영상·운동 저장소 추가
@@ -686,14 +693,48 @@ async function loadSettings() {
   if (!TIMEFRAMES.includes(S.defaultTimeframe)) S.defaultTimeframe = '5분';   // 1분이 빠져서 기본값 조정   // 이전 버전 설정은 두고 빠진 값만 기본값으로 채움
 }
 const saveSettings = () => putOne('settings', S);
+// 이름이 같은 항목이 여러 개면 하나로 합침 (백업 '합치기' 등으로 생긴 중복).
+// 기록이 가장 많은 항목을 남기고, 다른 항목을 가리키던 기록은 남긴 항목으로 옮김. 돌려주는 값: { 지운 id: 남긴 id }
+async function dedupeByName(store, refs, filter) {
+  const items = (await getAll(store)).filter(filter || (() => true));
+  const groups = {};
+  items.forEach(x => { const k = (x.name || '').trim(); if (k) (groups[k] = groups[k] || []).push(x); });
+  const dups = Object.values(groups).filter(g => g.length > 1);
+  if (!dups.length) return {};
+  const refData = {};
+  for (const r of refs) if (!refData[r.store]) refData[r.store] = await getAll(r.store);
+  const count = id => refs.reduce((n, r) => n + refData[r.store].filter(x => x[r.field] === id).length, 0);
+  const map = {}, ops = [];
+  dups.forEach(g => {
+    g.sort((a, b) => count(b.id) - count(a.id) || (a.order || 0) - (b.order || 0));
+    g.slice(1).forEach(x => { map[x.id] = g[0].id; ops.push({ store, type: 'delete', key: x.id }); });
+    const minOrder = Math.min(...g.map(x => x.order || 0));   // 남긴 항목은 가장 앞 순서 자리로
+    if ((g[0].order || 0) !== minOrder) ops.push({ store, type: 'put', value: { ...g[0], order: minOrder } });
+  });
+  refs.forEach(r => refData[r.store].forEach(rec => {
+    if (map[rec[r.field]]) ops.push({ store: r.store, type: 'put', value: { ...rec, [r.field]: map[rec[r.field]] } });
+  }));
+  await writeMany(ops);
+  return map;
+}
 async function loadSymbols() {
+  const map = await dedupeByName('symbols', [{ store: 'predictions', field: 'symbolId' }, { store: 'backtests', field: 'symbolId' }]);
   symbols = (await getAll('symbols')).sort((a, b) => a.order - b.order);
   symMap = Object.fromEntries(symbols.map(s => [s.id, s]));
-  // 필수 종목이 아직 정해지지 않았으면 기본 4종목을 이름으로 찾아 지정
-  if (!Array.isArray(S.mandatorySymbolIds)) {
-    S.mandatorySymbolIds = MANDATORY_NAMES.map(n => (symbols.find(x => x.name === n) || {}).id).filter(Boolean);
-    await saveSettings();
+  let changed = false;
+  if (map[S.lastSymbolId]) { S.lastSymbolId = map[S.lastSymbolId]; changed = true; }
+  if (S.lastBt && map[S.lastBt.symbolId]) { S.lastBt = { ...S.lastBt, symbolId: map[S.lastBt.symbolId] }; changed = true; }
+  // 필수 종목: 합친 종목 번호로 바꾸고, 없는 종목은 뺌
+  if (Array.isArray(S.mandatorySymbolIds)) {
+    const valid = [...new Set(S.mandatorySymbolIds.map(id => map[id] || id).filter(id => symMap[id]))];
+    if (valid.join() !== S.mandatorySymbolIds.join()) { S.mandatorySymbolIds = valid; changed = true; }
   }
+  // 아직 정해지지 않았거나, 사용자가 직접 끈 적 없이 비어 버렸으면 기본 4종목을 이름으로 찾아 지정
+  if (!Array.isArray(S.mandatorySymbolIds) || (!S.mandatorySymbolIds.length && !S.mandatoryEdited)) {
+    S.mandatorySymbolIds = MANDATORY_NAMES.map(n => (symbols.find(x => x.name === n) || {}).id).filter(Boolean);
+    changed = true;
+  }
+  if (changed) await saveSettings();
 }
 function mandatoryList() { return (S.mandatorySymbolIds || []).filter(id => symMap[id]).sort((a, b) => symMap[a].order - symMap[b].order); }
 async function seedIfNeeded() {
@@ -1929,6 +1970,7 @@ async function doImport(mode) {
     await writeMany(ops);
     pendingImport = null;
     await loadSettings(); await loadSymbols(); await loadTechniques();
+    await dedupeByName('exercises', [{ store: 'exerciseLogs', field: 'exerciseId' }], e => e.active !== false);
     closeModal(); toast('백업을 가져왔어요');
     view = 'today'; render();
   } catch (e) { uiAlert('가져오기에 실패했어요. 기존 기록은 그대로입니다.\n' + (e && e.message ? e.message : '')); }
@@ -1940,6 +1982,8 @@ let techFilter = 'all';   // 기법 화면 필터: all | win | loss
 let techniques = [], techMap = {};
 const BT_RESULT = { win: '성공', loss: '실패' };
 async function loadTechniques() {
+  const map = await dedupeByName('techniques', [{ store: 'backtests', field: 'techniqueId' }]);
+  if (S.lastBt && map[S.lastBt.techniqueId]) { S.lastBt = { ...S.lastBt, techniqueId: map[S.lastBt.techniqueId] }; await saveSettings(); }
   techniques = (await getAll('techniques')).sort((a, b) => a.order - b.order);
   techMap = Object.fromEntries(techniques.map(t => [t.id, t]));
 }
@@ -2692,6 +2736,7 @@ const App = {
   async toggleMand(id) {
     const l = S.mandatorySymbolIds || [], i = l.indexOf(id);
     i >= 0 ? l.splice(i, 1) : l.push(id); S.mandatorySymbolIds = l;
+    S.mandatoryEdited = true;   // 직접 고른 뒤에는 비워 둬도 기본 4종목으로 되돌리지 않음
     await saveSettings(); render();
   },
   async stepScore(k, d) {
@@ -2719,6 +2764,7 @@ window.App = App;
     await loadSymbols();
     await loadTechniques();
     await seedExercises();
+    await dedupeByName('exercises', [{ store: 'exerciseLogs', field: 'exerciseId' }], e => e.active !== false);
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     const dueAtStart = await refreshStatuses();   // 앱을 열 때 확인 (방식 C)
     render();
